@@ -1,0 +1,54 @@
+server:
+  port: 9091
+  mode: debug # debug, release
+
+database:
+  postgres:
+    host: localhost
+    port: 5432
+    user: kaixin
+    password: kaixin100
+    dbname: krasis
+    sslmode: disable
+    max_open_conns: 25
+    max_idle_conns: 5
+    conn_max_lifetime: 300 # seconds
+  redis:
+    addr: localhost:6379
+    password: "kaixin100"
+    db: 0
+    pool_size: 10
+
+jwt:
+  secret: change-me-in-production
+  issuer: krasis-api
+  expiration: 604800 # 7 days in seconds
+
+oauth:
+  github:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+    redirect_uri: http://localhost:8080/auth/github/callback
+  google:
+    enabled: false
+    client_id: ""
+    client_secret: ""
+    redirect_uri: http://localhost:8080/auth/google/callback
+
+storage:
+  minio:
+    endpoint: localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    bucket: krasis
+    use_ssl: false
+  ai:
+    qdrant:
+      endpoint: http://localhost:6333
+      api_key: ""
+      collection: note_chunks
+
+log:
+  level: debug # debug, info, warn, error
+  format: json

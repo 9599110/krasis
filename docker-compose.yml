@@ -1,0 +1,161 @@
+services:
+  postgres:
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    container_name: krasis-postgres
+    command:
+      - postgres
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - listen_addresses=*
+    environment:
+      POSTGRES_DB: krasis
+      POSTGRES_USER: krasis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-krasis123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U krasis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: krasis-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: krasis-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: krasis-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: krasis-server
+    environment:
+      SERVER_PORT: 8080
+      SERVER_MODE: release
+      DB_POSTGRES_HOST: postgres
+      DB_POSTGRES_PORT: 5432
+      DB_POSTGRES_USER: krasis
+      DB_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-krasis123}
+      DB_POSTGRES_DBNAME: krasis
+      DB_POSTGRES_SSL_MODE: disable
+      DB_POSTGRES_MAX_OPEN_CONNS: 25
+      DB_POSTGRES_MAX_IDLE_CONNS: 5
+      DB_POSTGRES_CONN_MAX_LIFETIME: 300
+      DB_REDIS_ADDR: redis:6379
+      DB_REDIS_PASSWORD: ""
+      DB_REDIS_DB: 0
+      DB_REDIS_POOL_SIZE: 10
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      JWT_EXPIRATION: 86400
+      JWT_ISSUER: krasis
+      OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID}
+      OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET}
+      OAUTH_GITHUB_REDIRECT_URI: http://localhost:8080/auth/github/callback
+      OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID}
+      OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET}
+      OAUTH_GOOGLE_REDIRECT_URI: http://localhost:8080/auth/google/callback
+      STORAGE_MINIO_ENDPOINT: minio:9000
+      STORAGE_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      STORAGE_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
+      STORAGE_MINIO_BUCKET: krasis
+      STORAGE_MINIO_USE_SSL: false
+      STORAGE_AI_QDRANT_ENDPOINT: http://qdrant:6333
+      STORAGE_AI_QDRANT_API_KEY: ${QDRANT_API_KEY}
+      STORAGE_AI_QDRANT_COLLECTION: note_chunks
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: krasis-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on:
+      - server
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: krasis-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  qdrant_data:
+  prometheus_data:
+  grafana_data:

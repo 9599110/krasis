@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "krasis-sdk"
+version = "0.3.0"
+description = "Python SDK for the Krasis intelligent notes system"
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "ruff"]
+
+[tool.setuptools.packages.find]
+include = ["krasis*"]

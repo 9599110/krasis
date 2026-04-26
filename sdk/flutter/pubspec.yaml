@@ -1,0 +1,30 @@
+name: krasis_sdk
+description: Krasis intelligent notes system SDK - AI-powered collaborative notes with RAG
+version: 0.1.0
+homepage: https://github.com/krasis/krasis
+repository: https://github.com/krasis/krasis
+issue_tracker: https://github.com/krasis/krasis/issues
+documentation: https://github.com/krasis/krasis/tree/main/sdk/flutter
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.1.0
+  web_socket_channel: ^2.4.0
+  shared_preferences: ^2.2.0
+  flutter_riverpod: ^2.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+topics:
+  - notes
+  - ai
+  - collaborative-editing
+  - rag

@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS idx_notes_title_trgm;
+DROP INDEX IF EXISTS idx_notes_search;
+ALTER TABLE notes DROP COLUMN IF EXISTS search_vector;
+DROP EXTENSION IF EXISTS pg_trgm;
+DROP EXTENSION IF EXISTS unaccent;

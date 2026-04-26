@@ -1,0 +1,6 @@
+DROP TABLE IF EXISTS audit_logs;
+ALTER TABLE users DROP COLUMN IF EXISTS group_id;
+DROP TABLE IF EXISTS group_features;
+DROP TABLE IF EXISTS groups;
+DROP TABLE IF EXISTS oauth_config;
+DROP TABLE IF EXISTS system_config;
