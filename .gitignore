@@ -1,0 +1,80 @@
+# Environment
+.env
+*.local
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+tmp/
+
+# Backend
+backend/tmp/
+backend/vendor/
+backend/server
+backend/main
+backend/bin/
+
+# Flutter/Dart
+frontend/build/
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.metadata
+
+# Android
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/local.properties
+frontend/android/app/release/
+
+# iOS
+frontend/ios/Pods/
+frontend/ios/Podfile.lock
+frontend/ios/Flutter/Generated.xcconfig
+frontend/ios/Flutter/ephemeral/
+frontend/ios/*.xcworkspace/xcuserdata/
+frontend/ios/*.xcodeproj/xcuserdata/
+
+# macOS
+frontend/macos/Pods/
+frontend/macos/Flutter/ephemeral/
+frontend/macos/Runner.xcodeproj/xcuserdata/
+frontend/macos/Runner.xcworkspace/xcuserdata/
+frontend/macos/build/
+frontend/macos/Runner.xcworkspace/xcuserdata/
+frontend/macos/Runner.xcodeproj/xcuserdata/
+
+# Node.js (admin)
+frontend/admin/node_modules/
+frontend/admin/dist/
+frontend/admin/.vite/
+frontend/admin/*.tsbuildinfo
+
+# Node.js (krasis-web)
+frontend/krasis-web/node_modules/
+frontend/krasis-web/dist/
+frontend/krasis-web/.vite/
+
+# SDK
+sdk/flutter/.dart_tool/
+sdk/flutter/build/
+sdk/flutter/.flutter-plugins
+sdk/flutter/.flutter-plugins-dependencies
+sdk/javascript/node_modules/
+sdk/javascript/dist/
+sdk/python/.venv/
+sdk/python/__pycache__/
+sdk/python/**/*.egg-info/
+sdk/python/krasis_sdk.egg-info/
+
+# VS Code
+.vscode/
+
+# IDEA
+.idea/
+*.iml
+
+# Docker
+docker/postgres/pg_hba.conf
