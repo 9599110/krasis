@@ -13,6 +13,17 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
+  void initState() {
+    super.initState();
+    debugPrint('[home] initState called');
+    // Load notes when screen is mounted (after login)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('[home] postFrameCallback -> calling loadNotes()');
+      ref.read(noteListProvider.notifier).loadNotes();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final notesState = ref.watch(noteListProvider);
 

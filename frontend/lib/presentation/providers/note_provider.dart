@@ -13,12 +13,13 @@ final noteListProvider = StateNotifierProvider<NoteListNotifier, AsyncValue<List
 class NoteListNotifier extends StateNotifier<AsyncValue<List<NoteModel>>> {
   final ApiClient _api;
   String? _currentFolderId;
+  bool _initialized = false;
 
-  NoteListNotifier(this._api) : super(const AsyncValue.loading()) {
-    loadNotes();
-  }
+  NoteListNotifier(this._api) : super(const AsyncValue.loading());
 
   Future<void> loadNotes({String? folderId}) async {
+    if (_initialized && _currentFolderId == folderId) return;
+    _initialized = true;
     _currentFolderId = folderId;
     state = const AsyncValue.loading();
     try {

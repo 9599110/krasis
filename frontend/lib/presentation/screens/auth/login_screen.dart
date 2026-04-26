@@ -34,6 +34,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       if (_isLogin) {
         await ref.read(authProvider.notifier).login(email, password);
+        // Defer navigation so GoRouter's redirect sees the updated auth state.
+        if (mounted) {
+          Future.microtask(() {
+            if (mounted) context.go('/notes');
+          });
+        }
       } else {
         await ref.read(authProvider.notifier).register(email, password, username);
         if (mounted) {
@@ -43,10 +49,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           setState(() => _isLogin = true);
         }
         return;
-      }
-      if (mounted) {
-        debugPrint('[login] navigating to /notes');
-        context.go('/notes');
       }
     } catch (e) {
       if (mounted) {
@@ -66,7 +68,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('[login] build called');
     final authState = ref.watch(authProvider);
+    debugPrint('[login] authState: authenticated=${authState.isAuthenticated}, loading=${authState.isLoading}, error=${authState.error}');
 
     return Scaffold(
       body: SafeArea(

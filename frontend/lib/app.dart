@@ -19,105 +19,86 @@ import 'presentation/widgets/ai_floating_dialog.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+final router = GoRouter(
+  navigatorKey: _rootNavigatorKey,
+  initialLocation: '/login',
+  routes: [
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
+    ShellRoute(
+      builder: (context, state, child) => MainShell(child: child),
+      routes: [
+        GoRoute(
+          path: '/',
+          redirect: (context, state) => '/notes',
+        ),
+        GoRoute(
+          path: '/notes',
+          builder: (context, state) => const HomeScreen(),
+          routes: [
+            GoRoute(
+              path: 'note/:noteId',
+              builder: (context, state) {
+                final noteId = state.pathParameters['noteId']!;
+                return NoteEditorScreen(noteId: noteId);
+              },
+              routes: [
+                GoRoute(
+                  path: 'versions',
+                  builder: (context, state) {
+                    final noteId = state.pathParameters['noteId']!;
+                    return VersionHistoryScreen(noteId: noteId);
+                  },
+                ),
+                GoRoute(
+                  path: 'share',
+                  builder: (context, state) {
+                    final noteId = state.pathParameters['noteId']!;
+                    return ShareScreen(noteId: noteId);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        GoRoute(
+          path: '/ai',
+          builder: (context, state) => const AIChatScreen(),
+        ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
+        GoRoute(
+          path: '/search',
+          builder: (context, state) => const SearchScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: '/devices',
+          builder: (context, state) => const DevicesScreen(),
+        ),
+      ],
+    ),
+  ],
+);
 
-  return GoRouter(
-    navigatorKey: _rootNavigatorKey,
-    initialLocation: '/splash',
-    redirect: (context, state) {
-      final path = state.matchedLocation;
-
-      if (path == '/splash') return null;
-
-      if (path.startsWith('/login')) {
-        if (authState.isAuthenticated) return '/notes';
-        return null;
-      }
-
-      if (!authState.isAuthenticated) {
-        return '/login';
-      }
-
-      return null;
-    },
-    routes: [
-      GoRoute(
-        path: '/splash',
-        builder: (context, state) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
-      ShellRoute(
-        builder: (context, state, child) => MainShell(child: child),
-        routes: [
-          GoRoute(
-            path: '/',
-            redirect: (context, state) => '/notes',
-          ),
-          GoRoute(
-            path: '/notes',
-            builder: (context, state) => const HomeScreen(),
-            routes: [
-              GoRoute(
-                path: 'note/:noteId',
-                builder: (context, state) {
-                  final noteId = state.pathParameters['noteId']!;
-                  return NoteEditorScreen(noteId: noteId);
-                },
-                routes: [
-                  GoRoute(
-                    path: 'versions',
-                    builder: (context, state) {
-                      final noteId = state.pathParameters['noteId']!;
-                      return VersionHistoryScreen(noteId: noteId);
-                    },
-                  ),
-                  GoRoute(
-                    path: 'share',
-                    builder: (context, state) {
-                      final noteId = state.pathParameters['noteId']!;
-                      return ShareScreen(noteId: noteId);
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          GoRoute(
-            path: '/ai',
-            builder: (context, state) => const AIChatScreen(),
-          ),
-          GoRoute(
-            path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
-          ),
-          GoRoute(
-            path: '/search',
-            builder: (context, state) => const SearchScreen(),
-          ),
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
-          ),
-          GoRoute(
-            path: '/devices',
-            builder: (context, state) => const DevicesScreen(),
-          ),
-        ],
-      ),
-    ],
-  );
-});
+final routerProvider = Provider<GoRouter>((ref) => router);
 
 class KrasisApp extends ConsumerWidget {
   const KrasisApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
@@ -229,7 +210,6 @@ class _MainShellState extends ConsumerState<MainShell> {
 
     return Column(
       children: [
-        // Header
         SizedBox(
           height: 56,
           child: Row(
@@ -260,7 +240,6 @@ class _MainShellState extends ConsumerState<MainShell> {
           ),
         ),
         const Divider(height: 1),
-        // New note button
         Padding(
           padding: const EdgeInsets.all(8),
           child: _sidebarCollapsed
@@ -276,7 +255,6 @@ class _MainShellState extends ConsumerState<MainShell> {
                 ),
         ),
         const Divider(height: 1),
-        // Nav items
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 8),

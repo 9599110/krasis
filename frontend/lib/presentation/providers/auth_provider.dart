@@ -65,7 +65,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       state = const AuthState.loading();
-      final response = await _api.get('/auth/me').timeout(const Duration(seconds: 12));
+      final response = await _api.get('/auth/me');
       final data = response.data!['data'] as Map<String, dynamic>;
       final user = UserModel.fromJson(data);
       state = AuthState.authenticated(user);
@@ -76,35 +76,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> login(String email, String password) async {
+    debugPrint('[auth] login start, state=loading');
     state = const AuthState.loading();
     try {
-      debugPrint('[auth] login start');
-      final response = await _api
-          .post('/auth/login', data: {
-            'email': email,
-            'password': password,
-          })
-          .timeout(const Duration(seconds: 12));
+      debugPrint('[auth] calling POST /auth/login');
+      final response = await _api.post('/auth/login', data: {
+        'email': email,
+        'password': password,
+      });
+      debugPrint('[auth] login response received, statusCode=${response.statusCode}');
       final data = response.data!['data'] as Map<String, dynamic>;
       final token = data['token'] as String;
+      debugPrint('[auth] token received, length=${token.length}');
       // Make token immediately available to subsequent requests (don't depend on prefs IO).
       _api.dio.options.headers['Authorization'] = 'Bearer $token';
-      // Avoid getting stuck in loading if /auth/me is slow/unavailable.
       final userJson = (data['user'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+      debugPrint('[auth] userJson keys=${userJson.keys}, isEmpty=${userJson.isEmpty}');
       if (userJson.isNotEmpty) {
+        debugPrint('[auth] setting authenticated state');
         state = AuthState.authenticated(UserModel.fromJson(userJson));
         debugPrint('[auth] login success -> authenticated');
-        // Persist token best-effort; don't block UI on platform channel.
         unawaited(_storage.saveAccessToken(token));
       } else {
-        // Persist token best-effort; don't block UI on platform channel.
         unawaited(_storage.saveAccessToken(token));
         debugPrint('[auth] login success -> init() fallback');
-        await init().timeout(const Duration(seconds: 12));
+        await init();
       }
+      debugPrint('[auth] login method complete');
     } catch (e) {
-      state = AuthState.withError(e.toString());
       debugPrint('[auth] login error: $e');
+      state = AuthState.withError(e.toString());
       rethrow;
     }
   }

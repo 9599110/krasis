@@ -74,9 +74,9 @@ class RetryInterceptor extends Interceptor {
   }
 
   bool _shouldRetry(DioException err) {
-    return err.type == DioExceptionType.connectionTimeout ||
-           err.type == DioExceptionType.receiveTimeout ||
-           err.type == DioExceptionType.connectionError ||
+    // Don't retry timeouts - the caller's timeout() already handles those.
+    // Only retry connection errors and server errors.
+    return err.type == DioExceptionType.connectionError ||
            (err.response?.statusCode != null && err.response!.statusCode! >= 500);
   }
 }
