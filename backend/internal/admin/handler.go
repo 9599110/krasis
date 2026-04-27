@@ -470,10 +470,11 @@ func (h *Handler) GetStatsOverview(c *gin.Context) {
 	totalUsers, _ := h.userService.CountUsers(c)
 	totalNotes, _ := h.noteRepo.Count(c.Request.Context())
 	totalStorage, _ := h.noteRepo.TotalStorageUsed(c.Request.Context())
+	activeUsers := middleware.GetActiveUsersCount(c, h.redis)
 
 	stats := StatsOverview{
 		TotalUsers:  totalUsers,
-		ActiveUsers: totalUsers, // TODO: count active sessions
+		ActiveUsers: activeUsers,
 		TotalNotes:  totalNotes,
 		StorageUsed: float64(totalStorage) / 1073741824,
 	}

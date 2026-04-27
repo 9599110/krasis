@@ -7,14 +7,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type Handler struct {
 	service *AIService
+	logger  *zap.Logger
 }
 
-func NewHandler(service *AIService) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *AIService, logger *zap.Logger) *Handler {
+	return &Handler{service: service, logger: logger}
 }
 
 func (h *Handler) Ask(c *gin.Context) {
@@ -51,7 +53,7 @@ func (h *Handler) Ask(c *gin.Context) {
 		return
 	}
 
-	// Persist messages
+	// Persist messages asynchronously with error logging
 	go func() {
 		bgCtx := context.Background()
 		userMsg := &Message{
@@ -59,14 +61,18 @@ func (h *Handler) Ask(c *gin.Context) {
 			Role:           "user",
 			Content:        req.Question,
 		}
-		h.service.SaveMessage(bgCtx, userMsg)
+		if err := h.service.SaveMessage(bgCtx, userMsg); err != nil {
+			h.logger.Error("failed to save user message", zap.String("conversation_id", conversationID), zap.Error(err))
+		}
 		assistantMsg := &Message{
 			ConversationID: uuid.MustParse(conversationID),
 			Role:           "assistant",
 			Content:        resp.Answer,
 			TokenCount:     len([]rune(resp.Answer)) / 4,
 		}
-		h.service.SaveMessage(bgCtx, assistantMsg)
+		if err := h.service.SaveMessage(bgCtx, assistantMsg); err != nil {
+			h.logger.Error("failed to save assistant message", zap.String("conversation_id", conversationID), zap.Error(err))
+		}
 	}()
 
 	resp.ConversationID = conversationID
@@ -101,7 +107,7 @@ func (h *Handler) AskStream(c *gin.Context) {
 		conversationID = conv.ID.String()
 	}
 
-	// Save user message asynchronously
+	// Save user message asynchronously with error logging
 	go func() {
 		bgCtx := context.Background()
 		msg := &Message{
@@ -109,7 +115,9 @@ func (h *Handler) AskStream(c *gin.Context) {
 			Role:           "user",
 			Content:        req.Question,
 		}
-		h.service.SaveMessage(bgCtx, msg)
+		if err := h.service.SaveMessage(bgCtx, msg); err != nil {
+			h.logger.Error("failed to save user message (stream)", zap.String("conversation_id", conversationID), zap.Error(err))
+		}
 	}()
 
 	stream, err := h.service.AskStream(c.Request.Context(), userID, &req)
@@ -133,16 +141,19 @@ func (h *Handler) AskStream(c *gin.Context) {
 		c.Writer.Flush()
 	}
 
-	// Save assistant message asynchronously
+	// Save assistant message asynchronously with error logging
 	go func() {
 		bgCtx := context.Background()
+		answer := answerBuilder.String()
 		msg := &Message{
 			ConversationID: uuid.MustParse(conversationID),
 			Role:           "assistant",
-			Content:        answerBuilder.String(),
-			TokenCount:     len([]rune(answerBuilder.String())) / 4,
+			Content:        answer,
+			TokenCount:     len([]rune(answer)) / 4,
 		}
-		h.service.SaveMessage(bgCtx, msg)
+		if err := h.service.SaveMessage(bgCtx, msg); err != nil {
+			h.logger.Error("failed to save assistant message (stream)", zap.String("conversation_id", conversationID), zap.Error(err))
+		}
 	}()
 
 	fmt.Fprintf(c.Writer, "event: done\ndata: {\"done\":true,\"conversation_id\":%q}\n\n", conversationID)

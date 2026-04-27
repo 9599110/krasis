@@ -159,10 +159,11 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 	}
 
 	// Use If-Match header version if provided, otherwise body version
-	if version > 0 && req.Version > 0 {
-		version = req.Version
-	}
-	if version == 0 {
+	// If-Match header takes precedence (HTTP standard)
+	if versionStr != "" && version > 0 {
+		// If-Match header is authoritative
+	} else {
+		// Fall back to body version
 		version = req.Version
 	}
 

@@ -111,11 +111,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> register(String email, String password, String username) async {
-    await _api.post('/auth/register', data: {
-      'email': email,
-      'password': password,
-      'username': username,
-    });
+    try {
+      final response = await _api.post('/auth/register', data: {
+        'email': email,
+        'password': password,
+        'username': username,
+      });
+      // Registration successful, auto-login
+      final data = response.data!['data'] as Map<String, dynamic>?;
+      if (data != null && data['token'] != null) {
+        final token = data['token'] as String;
+        _api.dio.options.headers['Authorization'] = 'Bearer $token';
+        await _storage.saveAccessToken(token);
+        await init();
+      } else {
+        // If no token returned, user needs to login manually
+        state = const AuthState.unauthenticated();
+      }
+    } catch (e) {
+      debugPrint('[auth] register error: $e');
+      state = AuthState.withError(e.toString());
+      rethrow;
+    }
   }
 
   String getOAuthUrl(String provider) {

@@ -36,20 +36,29 @@ class NoteModel {
       folderId = folderIdRaw;
     }
     final updatedAtRaw = json['updated_at'] as String?;
+    final createdAtRaw = json['created_at'] as String?;
+    final now = DateTime.now();
+
+    // Handle minimal response from createNote (only has id, title, version, created_at)
+    final ownerIdRaw = json['owner_id'];
+    final ownerId = ownerIdRaw is String ? ownerIdRaw : '';
+
+    final createdAt = createdAtRaw != null ? DateTime.parse(createdAtRaw) : now;
+    final updatedAt = updatedAtRaw != null ? DateTime.parse(updatedAtRaw) : createdAt;
 
     return NoteModel(
       id: json['id'] as String,
-      title: json['title'] as String,
+      title: json['title'] as String? ?? '',
       content: json['content'] as String? ?? '',
       contentHtml: json['content_html'] as String?,
-      ownerId: json['owner_id'] as String,
+      ownerId: ownerId,
       folderId: folderId,
       version: json['version'] as int? ?? 0,
       isPublic: json['is_public'] as bool? ?? false,
       shareToken: json['share_token'] as String?,
       viewCount: json['view_count'] as int? ?? 0,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: updatedAtRaw != null ? DateTime.parse(updatedAtRaw) : DateTime.parse(json['created_at'] as String),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 

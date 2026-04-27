@@ -147,7 +147,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 	keywordSearcher := &keywordSearchAdapter{repo: searchRepo}
 
 	aiService := ai.NewAIService(aiRepo, modelManager, qdrantClient, keywordSearcher)
-	aiHandler := ai.NewHandler(aiService)
+	aiHandler := ai.NewHandler(aiService, logger)
 
 	// Note module (with AI indexer for RAG sync)
 	noteRepo := note.NewNoteRepository(pool, logger)
