@@ -75,13 +75,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String username, String password) async {
     debugPrint('[auth] login start, state=loading');
     state = const AuthState.loading();
     try {
       debugPrint('[auth] calling POST /auth/login');
       final response = await _api.post('/auth/login', data: {
-        'email': email,
+        'username': username,
         'password': password,
       });
       debugPrint('[auth] login response received, statusCode=${response.statusCode}');

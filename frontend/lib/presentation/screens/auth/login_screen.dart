@@ -12,14 +12,14 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLogin = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -27,13 +27,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
+    final username = _usernameController.text.trim();
     final password = _passwordController.text;
-    final username = email.split('@').first;
 
     try {
       if (_isLogin) {
-        await ref.read(authProvider.notifier).login(email, password);
+        await ref.read(authProvider.notifier).login(username, password);
         // Defer navigation so GoRouter's redirect sees the updated auth state.
         if (mounted) {
           Future.microtask(() {
@@ -106,17 +105,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                // Email field
+                // Username field
                 TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _usernameController,
+                  keyboardType: TextInputType.text,
                   decoration: const InputDecoration(
-                    labelText: '邮箱',
-                    prefixIcon: Icon(Icons.email_outlined),
+                    labelText: '账号名',
+                    prefixIcon: Icon(Icons.person_outline),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return '请输入邮箱';
-                    if (!v.contains('@')) return '邮箱格式不正确';
+                    if (v == null || v.isEmpty) return '请输入账号名';
                     return null;
                   },
                 ),

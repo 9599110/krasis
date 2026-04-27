@@ -11,8 +11,8 @@ interface AuthState {
 export const useAuth = create<AuthState>((set) => ({
   user: null,
 
-  login: async (email: string, password: string) => {
-    const res = await request.post('/auth/login', { email, password })
+  login: async (username: string, password: string) => {
+    const res = await request.post('/auth/login', { username, password })
     const token = res.data.data.token
     localStorage.setItem('admin_token', token)
     const meRes = await request.get('/auth/me')

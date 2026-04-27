@@ -8,9 +8,10 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const isRegister = ref(false)
+const username = ref('')
 const email = ref('')
 const password = ref('')
-const name = ref('')
+const displayName = ref('')
 const error = ref('')
 const submitting = computed(() => authStore.loading)
 
@@ -18,18 +19,23 @@ async function handleSubmit() {
   error.value = ''
   try {
     if (isRegister.value) {
-      if (!name.value.trim()) {
-        error.value = 'Name is required'
+      if (!username.value.trim()) {
+        error.value = '请输入账号名'
+        return
+      }
+      if (!displayName.value.trim()) {
+        error.value = '请输入昵称'
         return
       }
       await authStore.register({
+        username: username.value.trim(),
         email: email.value.trim(),
         password: password.value,
-        name: name.value.trim(),
+        name: displayName.value.trim(),
       })
     } else {
       await authStore.login({
-        email: email.value.trim(),
+        username: username.value.trim(),
         password: password.value,
       })
     }
@@ -80,18 +86,28 @@ function getOAuthUrl(provider: string) {
         <div v-if="error" class="error-msg">{{ error }}</div>
 
         <div v-if="isRegister" class="form-group">
-          <label for="name">Name</label>
-          <input id="name" v-model="name" type="text" placeholder="Your name" required />
+          <label for="username">账号名</label>
+          <input id="username" v-model="username" type="text" placeholder="设置账号名" required />
         </div>
 
-        <div class="form-group">
-          <label for="email">Email</label>
+        <div v-if="isRegister" class="form-group">
+          <label for="email">邮箱</label>
           <input id="email" v-model="email" type="email" placeholder="you@example.com" required />
         </div>
 
+        <div v-if="isRegister" class="form-group">
+          <label for="name">昵称</label>
+          <input id="name" v-model="displayName" type="text" placeholder="您的昵称" required />
+        </div>
+
+        <div v-if="!isRegister" class="form-group">
+          <label for="username">账号名</label>
+          <input id="username" v-model="username" type="text" placeholder="请输入账号名" required />
+        </div>
+
         <div class="form-group">
-          <label for="password">Password</label>
-          <input id="password" v-model="password" type="password" placeholder="Password" required minlength="6" />
+          <label for="password">密码</label>
+          <input id="password" v-model="password" type="password" placeholder="密码" required minlength="6" />
         </div>
 
         <button type="submit" class="btn-primary" :disabled="submitting">

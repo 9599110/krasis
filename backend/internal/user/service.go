@@ -108,8 +108,8 @@ func (s *UserService) RegisterLocal(ctx context.Context, email, username, passwo
 	return user, nil
 }
 
-func (s *UserService) AuthenticateLocal(ctx context.Context, email, password string) (*User, error) {
-	user, err := s.repo.GetByEmail(ctx, email)
+func (s *UserService) AuthenticateByUsername(ctx context.Context, username, password string) (*User, error) {
+	user, err := s.repo.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("invalid credentials")
 	}

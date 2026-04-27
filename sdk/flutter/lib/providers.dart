@@ -55,10 +55,10 @@ class KrasisSdkNotifier extends Notifier<KrasisSDK?> {
     state?.setToken(token);
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String username, String password) async {
     final sdk = state;
     if (sdk == null) return;
-    final result = await sdk.auth.login(email, password);
+    final result = await sdk.auth.login(username, password);
     sdk.setToken(result.token);
     state = sdk; // trigger rebuild
   }

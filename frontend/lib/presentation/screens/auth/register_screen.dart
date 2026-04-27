@@ -84,11 +84,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   TextFormField(
                     controller: _usernameController,
                     decoration: const InputDecoration(
-                      labelText: '昵称',
+                      labelText: '账号名',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.person_outline),
                     ),
-                    validator: (v) => (v == null || v.isEmpty) ? '请输入昵称' : null,
+                    validator: (v) => (v == null || v.isEmpty) ? '请输入账号名' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

@@ -19,10 +19,10 @@ class AuthModule extends Module {
     );
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> login(String username, String password) async {
     final res = await client.post<Map<String, dynamic>>(
       '/auth/login',
-      {'email': email, 'password': password},
+      {'username': username, 'password': password},
     );
     final token = res['token'] as String;
     await client.setToken(token);

@@ -146,9 +146,10 @@ func (h *Handler) handleOAuthLogin(c *gin.Context, userInfo *UserInfo) {
 	})
 }
 
-// Register handles local email/password registration.
+// Register handles local registration with username, email and password.
 func (h *Handler) Register(c *gin.Context) {
 	var req struct {
+		Username string `json:"username"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 		Name     string `json:"name"`
@@ -158,7 +159,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	userModel, err := h.userService.RegisterLocal(c, req.Email, req.Name, req.Password)
+	userModel, err := h.userService.RegisterLocal(c, req.Email, req.Username, req.Password)
 	if err != nil {
 		// best-effort mapping
 		if err.Error() == "email already exists" {
@@ -208,10 +209,10 @@ func (h *Handler) Register(c *gin.Context) {
 	})
 }
 
-// Login handles local email/password login.
+// Login handles local username/password login.
 func (h *Handler) Login(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email"`
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -219,7 +220,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	userModel, err := h.userService.AuthenticateLocal(c, req.Email, req.Password)
+	userModel, err := h.userService.AuthenticateByUsername(c, req.Username, req.Password)
 	if err != nil {
 		response.Error(c, 401, response.ErrUnauthorized, "账号或密码错误")
 		return
