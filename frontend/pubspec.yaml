@@ -16,7 +16,7 @@ dependencies:
   dio: ^5.4.0
   web_socket_channel: ^2.4.0
   shared_preferences: ^2.2.0
-  flutter_quill: ^11.5.0
+  flutter_quill: ^10.8.5
   markdown_quill: ^4.3.0
   cached_network_image: ^3.3.0
   uuid: ^4.3.0
