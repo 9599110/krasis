@@ -46,11 +46,11 @@ func StatsMiddleware(rdb *redis.Client) gin.HandlerFunc {
 		// Track active users using Redis Set (unique user IDs per day)
 		if userID := c.GetString("user_id"); userID != "" {
 			userKey := fmt.Sprintf("stats:active_users:%s", today)
-			tomorrow = time.Now().AddDate(0, 0, 1)
-			pipe = rdb.Pipeline()
-			pipe.SAdd(c.Request.Context(), userKey, userID)
-			pipe.ExpireAt(c.Request.Context(), userKey, tomorrow)
-			_, _ = pipe.Exec(c.Request.Context())
+			userTomorrow := time.Now().AddDate(0, 0, 1)
+			userPipe := rdb.Pipeline()
+			userPipe.SAdd(c.Request.Context(), userKey, userID)
+			userPipe.ExpireAt(c.Request.Context(), userKey, userTomorrow)
+			_, _ = userPipe.Exec(c.Request.Context())
 		}
 	}
 }

@@ -1,16 +1,26 @@
 package file
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/krasis/krasis/pkg/response"
 )
 
-type Handler struct {
-	service *Service
+// FileServiceInterface defines the interface for file service operations
+type FileServiceInterface interface {
+	GeneratePresignURL(ctx context.Context, userID uuid.UUID, fileName, fileType string, noteID *uuid.UUID) (*PresignResult, error)
+	ConfirmUpload(ctx context.Context, fileID uuid.UUID) error
+	DeleteFile(ctx context.Context, fileID uuid.UUID) error
+	ListByNote(ctx context.Context, noteID uuid.UUID) ([]*File, error)
 }
 
-func NewHandler(service *Service) *Handler {
+type Handler struct {
+	service FileServiceInterface
+}
+
+func NewHandler(service FileServiceInterface) *Handler {
 	return &Handler{service: service}
 }
 

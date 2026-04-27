@@ -25,12 +25,19 @@ var upgrader = websocket.Upgrader{
 
 // Handler handles WebSocket upgrade and message routing.
 type Handler struct {
-	hub        *Hub
+	hub        HubInterface
 	jwtManager *auth.JWTManager
 	logger     *zap.Logger
 }
 
-func NewHandler(hub *Hub, jwtManager *auth.JWTManager, logger *zap.Logger) *Handler {
+// HubInterface defines the interface for hub operations
+type HubInterface interface {
+	GetOrCreateRoom(noteID string) *Room
+	CloseRoom(noteID string)
+	RoomCount() int
+}
+
+func NewHandler(hub HubInterface, jwtManager *auth.JWTManager, logger *zap.Logger) *Handler {
 	return &Handler{
 		hub:        hub,
 		jwtManager: jwtManager,

@@ -38,9 +38,25 @@ func (r *SearchRepository) Search(ctx context.Context, query, searchType string,
 		return []*SearchResult{}, 0, nil // Files search not yet implemented
 	}
 
-	// Hybrid FTS: combine Chinese (search_vector_zh) and English/simple (search_vector) results
-	// Each subquery gets its own score, then we merge and rank by the higher score
 	offset := (page - 1) * size
+
+	// Try hybrid FTS first, fallback to simple FTS if zhparser not available
+	results, total, err := r.searchHybrid(ctx, tsQuery, page, size, offset)
+	if err != nil {
+		// If Chinese FTS fails (zhparser not installed), fallback to simple FTS
+		return r.searchSimple(ctx, tsQuery, page, size, offset)
+	}
+
+	if total == 0 {
+		// Fallback: trigram fuzzy search
+		return r.searchByTrigram(ctx, query, page, size)
+	}
+
+	return results, total, nil
+}
+
+// searchHybrid performs hybrid search with Chinese and simple FTS
+func (r *SearchRepository) searchHybrid(ctx context.Context, tsQuery string, page, size, offset int) ([]*SearchResult, int64, error) {
 	args := []interface{}{tsQuery, tsQuery, size, offset}
 
 	queryStr := `
@@ -96,12 +112,56 @@ func (r *SearchRepository) Search(ctx context.Context, query, searchType string,
 		return nil, 0, err
 	}
 
-	if total == 0 {
-		// Fallback: trigram fuzzy search
-		return r.searchByTrigram(ctx, query, page, size)
+	rows, err := r.pool.Query(ctx, queryStr, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var results []*SearchResult
+	for rows.Next() {
+		var sr SearchResult
+		var highlights string
+		sr.Type = "note"
+		if err := rows.Scan(&sr.ID, &sr.Title, &highlights, &sr.Score, &sr.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		if highlights != "" {
+			sr.Highlights = []string{highlights}
+		}
+		results = append(results, &sr)
 	}
 
-	rows, err := r.pool.Query(ctx, queryStr, args...)
+	return results, total, nil
+}
+
+// searchSimple performs simple FTS search without Chinese support
+func (r *SearchRepository) searchSimple(ctx context.Context, tsQuery string, page, size, offset int) ([]*SearchResult, int64, error) {
+	queryStr := `
+		SELECT n.id, n.title,
+			ts_headline('simple', n.content, to_tsquery('simple', $1),
+				'StartSel=<em> StopSel=</em> MaxWords=35 MinWords=10') AS highlights,
+			ts_rank(n.search_vector, to_tsquery('simple', $1)) AS score,
+			n.updated_at
+		FROM notes n
+		WHERE n.is_deleted = false
+		  AND n.search_vector @@ to_tsquery('simple', $1)
+		ORDER BY score DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	var total int64
+	countQuery := `
+		SELECT COUNT(*)
+		FROM notes n
+		WHERE n.is_deleted = false
+		  AND n.search_vector @@ to_tsquery('simple', $1)
+	`
+	if err := r.pool.QueryRow(ctx, countQuery, tsQuery).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	rows, err := r.pool.Query(ctx, queryStr, tsQuery, size, offset)
 	if err != nil {
 		return nil, 0, err
 	}

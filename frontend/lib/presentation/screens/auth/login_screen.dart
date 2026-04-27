@@ -15,6 +15,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _passwordVisible = false;
 
   @override
   void dispose() {
@@ -110,10 +111,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Password field
                 TextFormField(
                   controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: !_passwordVisible,
+                  decoration: InputDecoration(
                     labelText: '密码',
-                    prefixIcon: Icon(Icons.lock_outlined),
+                    prefixIcon: const Icon(Icons.lock_outlined),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _passwordVisible ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                    ),
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return '请输入密码';

@@ -47,7 +47,8 @@ func (h *Hub) GetOrCreateRoom(noteID string) *Room {
 }
 
 // RemoveRoom removes an empty room from the hub.
-func (h *Hub) RemoveRoom(noteID string) {
+// CloseRoom closes and removes a room by note ID
+func (h *Hub) CloseRoom(noteID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	delete(h.rooms, noteID)

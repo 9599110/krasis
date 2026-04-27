@@ -10,12 +10,23 @@ import (
 	"go.uber.org/zap"
 )
 
+// AIServiceInterface defines the interface for AI service operations
+type AIServiceInterface interface {
+	Ask(ctx context.Context, userID string, req *AskRequest) (*AskResponse, error)
+	AskStream(ctx context.Context, userID string, req *AskRequest) (<-chan string, error)
+	CreateConversation(ctx context.Context, userID, title, modelID string) (*Conversation, error)
+	ListConversations(ctx context.Context, userID string) ([]*Conversation, error)
+	ListMessages(ctx context.Context, conversationID, userID string) ([]*Message, error)
+	SaveMessage(ctx context.Context, msg *Message) error
+	GetModelManager() *ModelConfigManager
+}
+
 type Handler struct {
-	service *AIService
+	service AIServiceInterface
 	logger  *zap.Logger
 }
 
-func NewHandler(service *AIService, logger *zap.Logger) *Handler {
+func NewHandler(service AIServiceInterface, logger *zap.Logger) *Handler {
 	return &Handler{service: service, logger: logger}
 }
 

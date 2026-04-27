@@ -44,12 +44,13 @@ func startPostgres(t *testing.T) (*pgxpool.Pool, func()) {
 		postgres.WithDatabase("krasis"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
-		postgres.WithOrderedInitScripts(
+		postgres.WithInitScripts(
 			filepath.Join(dir, "000001_create_users_table.up.sql"),
 			filepath.Join(dir, "000002_create_oauth_table.up.sql"),
 			filepath.Join(dir, "000003_create_roles_table.up.sql"),
 			filepath.Join(dir, "000004_create_notes_and_folders.up.sql"),
-			filepath.Join(dir, "000006_create_search_tables.up.sql"),
+			filepath.Join(dir, "000007_add_full_text_search.up.sql"),
+			filepath.Join(dir, "000010_add_chinese_fts.up.sql"),
 		),
 	)
 	if err != nil {

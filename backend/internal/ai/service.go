@@ -262,6 +262,11 @@ func (s *AIService) SaveMessage(ctx context.Context, msg *Message) error {
 	return s.repo.CreateMessage(ctx, msg)
 }
 
+// GetModelManager returns the model configuration manager
+func (s *AIService) GetModelManager() *ModelConfigManager {
+	return s.modelManager
+}
+
 // DeleteNoteIndex removes a note's embeddings from the vector store
 func (s *AIService) DeleteNoteIndex(ctx context.Context, noteID string) error {
 	if s.vectorStore != nil {
