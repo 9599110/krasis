@@ -57,20 +57,31 @@ class Note {
     required this.updatedAt,
   });
 
-  factory Note.fromJson(Map<String, dynamic> json) => Note(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        content: json['content'] as String? ?? '',
-        contentHtml: json['content_html'] as String?,
-        ownerId: json['owner_id'] as String,
-        folderId: json['folder_id'] as String?,
-        version: json['version'] as int? ?? 0,
-        isPublic: json['is_public'] as bool? ?? false,
-        shareToken: json['share_token'] as String?,
-        viewCount: json['view_count'] as int? ?? 0,
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-      );
+  factory Note.fromJson(Map<String, dynamic> json) {
+    final folderIdRaw = json['folder_id'];
+    String? folderId;
+    if (folderIdRaw is Map) {
+      folderId = folderIdRaw['Valid'] == true ? folderIdRaw['UUID'] as String? : null;
+    } else if (folderIdRaw is String) {
+      folderId = folderIdRaw;
+    }
+    final updatedAtRaw = json['updated_at'] as String?;
+
+    return Note(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String? ?? '',
+      contentHtml: json['content_html'] as String?,
+      ownerId: json['owner_id'] as String,
+      folderId: folderId,
+      version: json['version'] as int? ?? 0,
+      isPublic: json['is_public'] as bool? ?? false,
+      shareToken: json['share_token'] as String?,
+      viewCount: json['view_count'] as int? ?? 0,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: updatedAtRaw != null ? DateTime.parse(updatedAtRaw) : DateTime.parse(json['created_at'] as String),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'title': title,
