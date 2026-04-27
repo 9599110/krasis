@@ -5,6 +5,7 @@ import 'config/app_config.dart';
 import 'config/theme.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/screens/auth/login_screen.dart';
+import 'presentation/screens/auth/register_screen.dart';
 import 'presentation/screens/auth/splash_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/note/note_editor_screen.dart';
@@ -30,6 +31,10 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),

@@ -15,7 +15,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  bool _isLogin = true;
 
   @override
   void dispose() {
@@ -31,28 +30,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final password = _passwordController.text;
 
     try {
-      if (_isLogin) {
-        await ref.read(authProvider.notifier).login(username, password);
-        // Defer navigation so GoRouter's redirect sees the updated auth state.
-        if (mounted) {
-          Future.microtask(() {
-            if (mounted) context.go('/notes');
-          });
-        }
-      } else {
-        await ref.read(authProvider.notifier).register(email, password, username);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('注册成功，请登录')),
-          );
-          setState(() => _isLogin = true);
-        }
-        return;
+      await ref.read(authProvider.notifier).login(username, password);
+      if (mounted) {
+        Future.microtask(() {
+          if (mounted) context.go('/notes');
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_isLogin ? '登录失败: $e' : '注册失败: $e')),
+          SnackBar(content: Text('登录失败: $e')),
         );
       }
     }
@@ -151,14 +138,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(_isLogin ? '登录' : '注册'),
+                      : const Text('登录'),
                 ),
                 const SizedBox(height: 16),
 
-                // Toggle login/register
+                // Go to register
                 TextButton(
-                  onPressed: () => setState(() => _isLogin = !_isLogin),
-                  child: Text(_isLogin ? '还没有账号？注册' : '已有账号？登录'),
+                  onPressed: () => context.push('/register'),
+                  child: const Text('还没有账号？注册'),
                 ),
                 const SizedBox(height: 24),
 
