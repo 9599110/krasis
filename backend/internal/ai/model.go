@@ -273,7 +273,7 @@ func (r *Repository) GetConversation(ctx context.Context, id, userID uuid.UUID) 
 
 func (r *Repository) CreateMessage(ctx context.Context, msg *Message) error {
 	return r.pool.QueryRow(ctx, `
-		INSERT INTO ai_messages (conversation_id, role, content, references, token_count, model)
+		INSERT INTO ai_messages (conversation_id, role, content, "references", token_count, model)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at
 	`, msg.ConversationID, msg.Role, msg.Content, msg.References, msg.TokenCount, msg.Model,
@@ -292,7 +292,7 @@ func (r *Repository) ListMessages(ctx context.Context, conversationID, userID uu
 	}
 
 	rows, err := r.pool.Query(ctx,
-		"SELECT id, conversation_id, role, content, references, token_count, model, created_at FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at",
+		"SELECT id, conversation_id, role, content, \"references\", token_count, model, created_at FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at",
 		conversationID,
 	)
 	if err != nil {
