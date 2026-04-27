@@ -140,6 +140,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         )
                       : const Text('登录'),
                 ),
+                const SizedBox(height: 8),
+
+                // Test account quick login
+                TextButton(
+                  onPressed: () {
+                    _usernameController.text = 'admin';
+                    _passwordController.text = 'kaixin100';
+                    _submit();
+                  },
+                  child: const Text('测试账号登录'),
+                ),
                 const SizedBox(height: 16),
 
                 // Go to register
