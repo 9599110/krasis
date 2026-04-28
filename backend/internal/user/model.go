@@ -177,7 +177,7 @@ func (r *UserRepository) ListUsers(ctx context.Context, keyword, role string, pa
 	args = append(args, size, offset)
 
 	query := fmt.Sprintf(`
-		SELECT u.id, u.email, u.username, u.avatar_url, u.status, u.created_at, u.updated_at,
+		SELECT u.id, u.email, u.username, COALESCE(u.avatar_url, ''), u.status, u.created_at, u.updated_at,
 			   COALESCE(r.name, 'member') AS role
 		FROM users u
 		LEFT JOIN user_roles ur ON u.id = ur.user_id
