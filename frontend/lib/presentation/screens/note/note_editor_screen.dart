@@ -320,11 +320,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             },
           ),
           if (widget.noteId != 'new') ...[
-            IconButton(
-              icon: const Icon(Icons.share),
-              tooltip: '分享',
-              onPressed: () => context.push('/notes/note/${widget.noteId}/share'),
-            ),
+            // TODO: 暂时屏蔽分享功能
+            // IconButton(
+            //   icon: const Icon(Icons.share),
+            //   tooltip: '分享',
+            //   onPressed: () => context.push('/notes/note/${widget.noteId}/share'),
+            // ),
             IconButton(
               icon: const Icon(Icons.history),
               tooltip: '版本历史',

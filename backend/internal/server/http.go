@@ -103,8 +103,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 		}
 	}
 
+	// System config repository (used by auth handler for dynamic JWT expiration)
+	sysConfigRepo := systemconfig.NewRepository(pool)
+
 	oauthManager := auth.NewOAuthManager(oauthConfigs)
-	authHandler := auth.NewHandler(oauthManager, jwtManager, sessionManager, userService)
+	authHandler := auth.NewHandler(oauthManager, jwtManager, sessionManager, userService, sysConfigRepo, cfg.JWT.Expiration)
 	userHandler := user.NewHandler(userService, sessionManager)
 
 	// Folder module
@@ -163,7 +166,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 	shareHandler := share.NewHandler(shareService, auditRepo)
 
 	// Admin module
-	sysConfigRepo := systemconfig.NewRepository(pool)
 	oauthRepo := oauthconfig.NewRepository(pool)
 	groupRepo := group.NewRepository(pool)
 	adminHandler := admin.NewHandler(userService, noteRepo, aiRepo, modelManager, sysConfigRepo, oauthRepo, groupRepo, auditRepo, rdb, logger)

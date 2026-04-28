@@ -96,6 +96,7 @@ type ConfigData struct {
 	EnableSharing          bool   `json:"enable_sharing"`
 	EnableAI               bool   `json:"enable_ai"`
 	MaintenanceMode        bool   `json:"maintenance_mode"`
+	JWTExpirationDays      int    `json:"jwt_expiration_days"`
 }
 
 func (r *Repository) GetAsConfigData(ctx context.Context) (*ConfigData, error) {
@@ -160,6 +161,10 @@ func (r *Repository) GetAsConfigData(ctx context.Context) (*ConfigData, error) {
 		case "maintenance_mode":
 			if b, ok := v.(bool); ok {
 				data.MaintenanceMode = b
+			}
+		case "jwt_expiration_days":
+			if f, ok := v.(float64); ok {
+				data.JWTExpirationDays = int(f)
 			}
 		}
 	}

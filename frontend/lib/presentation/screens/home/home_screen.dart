@@ -28,10 +28,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final notesState = ref.watch(noteListProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('我的笔记'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () => context.push('/search'),
+          ),
+        ],
+      ),
       body: notesState.when(
         data: (notes) => _buildNoteList(notes),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _buildError(e),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/notes/note/new'),
+        tooltip: '新建笔记',
+        child: const Icon(Icons.add),
       ),
     );
   }

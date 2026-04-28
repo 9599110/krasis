@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { listFolders, createFolder, deleteFolder } from '../api/notes'
-import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import { MessagePlugin, DialogPlugin, Dropdown, DropdownMenu, DropdownItem } from 'tdesign-vue-next'
 import AIChatPanel from '../components/AIChatPanel.vue'
 
 const aiPanelRef = ref<InstanceType<typeof AIChatPanel> | null>(null)
@@ -82,6 +82,11 @@ function openAIChat() {
 function isActiveFolder(folderId: string | null) {
   if (route.name !== 'notes') return false
   return String(route.query.folder || '') === (folderId || '')
+}
+
+function handleLogout() {
+  authStore.logout()
+  router.push({ name: 'login' })
 }
 </script>
 
@@ -169,29 +174,58 @@ function isActiveFolder(folderId: string | null) {
         </div>
       </div>
 
-      <div class="sidebar-footer" v-show="!sidebarCollapsed">
-        <div class="user-info">
-          <t-avatar size="32px">{{ authStore.user?.name?.charAt(0)?.toUpperCase() || '?' }}</t-avatar>
-          <div class="user-details">
-            <span class="user-name">{{ authStore.user?.name || '用户' }}</span>
-          </div>
-        </div>
-        <div class="footer-links">
-          <router-link :to="{ name: 'profile' }">
-            <t-icon name="user" /> 个人资料
-          </router-link>
-          <a v-if="authStore.user?.role === 'admin'" @click="router.push({ path: '/admin' })">
-            <t-icon name="setting" /> 管理后台
-          </a>
-          <a @click="authStore.logout(); router.push({ name: 'login' })">
-            <t-icon name="poweroff" /> 退出登录
-          </a>
-        </div>
-      </div>
     </aside>
 
     <main class="main-content">
-      <router-view />
+      <header class="main-header">
+        <div class="header-left">
+          <slot name="header-left" />
+        </div>
+        <div class="header-right">
+          <t-dropdown
+            trigger="click"
+            :popper-options="{ placement: 'bottom-end' }"
+          >
+            <div class="user-avatar-wrapper">
+              <t-avatar
+                v-if="authStore.user?.avatar"
+                :src="authStore.user.avatar"
+                size="small"
+                shape="circle"
+              />
+              <t-avatar
+                v-else
+                size="small"
+                shape="circle"
+                class="default-avatar"
+              >
+                <t-icon name="user" />
+              </t-avatar>
+              <span class="user-name">{{ authStore.user?.name || '用户' }}</span>
+              <t-icon name="chevron-down" size="14px" />
+            </div>
+            <template #dropdown>
+              <t-dropdown-menu>
+                <t-dropdown-item @click="router.push({ name: 'profile' })">
+                  <t-icon name="user" style="margin-right: 8px" />
+                  个人资料
+                </t-dropdown-item>
+                <t-dropdown-item v-if="authStore.user?.role === 'admin'" @click="router.push({ path: '/admin' })">
+                  <t-icon name="setting" style="margin-right: 8px" />
+                  管理后台
+                </t-dropdown-item>
+                <t-dropdown-item @click="handleLogout">
+                  <t-icon name="poweroff" style="margin-right: 8px" />
+                  退出登录
+                </t-dropdown-item>
+              </t-dropdown-menu>
+            </template>
+          </t-dropdown>
+        </div>
+      </header>
+      <div class="content-body">
+        <router-view />
+      </div>
     </main>
 
     <AIChatPanel ref="aiPanelRef" />
@@ -347,58 +381,60 @@ function isActiveFolder(folderId: string | null) {
   gap: 4px;
 }
 
-.sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid #e5e6eb;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-
-.user-details {
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1d2129;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.footer-links {
+.main-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  overflow: hidden;
+  background: #fff;
 }
 
-.footer-links a,
-.footer-links .router-link-active,
-.footer-links :deep(a) {
+.main-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #86909c;
-  text-decoration: none;
-  padding: 4px 0;
-  cursor: pointer;
-  transition: color 0.15s;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e5e6eb;
+  background: #fff;
+  min-height: 56px;
 }
 
-.footer-links a:hover {
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.user-avatar-wrapper:hover {
+  background: #f3f5f7;
+}
+
+.user-avatar-wrapper .user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+}
+
+.default-avatar {
+  background: #e8f3ff;
   color: #1677ff;
 }
 
-.main-content {
+.content-body {
   flex: 1;
   overflow: auto;
-  background: #fff;
 }
 </style>

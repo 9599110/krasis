@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/secure_storage.dart';
+import '../../../core/errors/exceptions.dart';
 import '../../../data/models/user_model.dart';
 import '../../../config/app_config.dart';
 
@@ -69,8 +70,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final data = response.data!['data'] as Map<String, dynamic>;
       final user = UserModel.fromJson(data);
       state = AuthState.authenticated(user);
-    } catch (e) {
+    } on AuthenticationException {
+      // 只有 401 才清除 token（token 过期或无效）
       await _storage.clearAccessToken();
+      state = const AuthState.unauthenticated();
+    } catch (e) {
+      // 网络错误等，保持 token 不变
+      debugPrint('[auth] init network error: $e');
       state = const AuthState.unauthenticated();
     }
   }

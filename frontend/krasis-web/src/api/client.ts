@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios'
 import type { ApiResponse } from './types'
+import router from '../router'
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
@@ -29,6 +30,12 @@ apiClient.interceptors.response.use(
     if (status === 401) {
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
+      // Only redirect if not already on auth pages
+      if (!window.location.pathname.startsWith('/login') &&
+          !window.location.pathname.startsWith('/register') &&
+          !window.location.pathname.startsWith('/share/')) {
+        router.push({ name: 'login', query: { redirect: window.location.pathname } })
+      }
     }
 
     if (status === 409) {

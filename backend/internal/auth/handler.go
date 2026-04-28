@@ -7,24 +7,40 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/krasis/krasis/internal/systemconfig"
 	"github.com/krasis/krasis/internal/user"
 	"github.com/krasis/krasis/pkg/response"
 )
 
 type Handler struct {
-	oauthManager   *OAuthManager
-	jwtManager     *JWTManager
-	sessionManager *SessionManager
-	userService    *user.UserService
+	oauthManager    *OAuthManager
+	jwtManager      *JWTManager
+	sessionManager  *SessionManager
+	userService     *user.UserService
+	sysConfigRepo   *systemconfig.Repository
+	defaultExpSecs  int // default expiration in seconds (from config.yaml)
 }
 
-func NewHandler(om *OAuthManager, jm *JWTManager, sm *SessionManager, us *user.UserService) *Handler {
+func NewHandler(om *OAuthManager, jm *JWTManager, sm *SessionManager, us *user.UserService, sysConfigRepo *systemconfig.Repository, defaultExpSecs int) *Handler {
 	return &Handler{
-		oauthManager:   om,
-		jwtManager:     jm,
-		sessionManager: sm,
-		userService:    us,
+		oauthManager:    om,
+		jwtManager:      jm,
+		sessionManager:  sm,
+		userService:     us,
+		sysConfigRepo:   sysConfigRepo,
+		defaultExpSecs:  defaultExpSecs,
 	}
+}
+
+// getJWTExpirationSeconds returns the configured JWT expiration in seconds
+func (h *Handler) getJWTExpirationSeconds() int {
+	if h.sysConfigRepo != nil {
+		cfg, err := h.sysConfigRepo.GetAsConfigData(context.Background())
+		if err == nil && cfg.JWTExpirationDays > 0 {
+			return cfg.JWTExpirationDays * 24 * 60 * 60
+		}
+	}
+	return h.defaultExpSecs
 }
 
 // GitHubLogin redirects to GitHub OAuth.
@@ -129,12 +145,13 @@ func (h *Handler) handleOAuthLogin(c *gin.Context, userInfo *UserInfo) {
 		return
 	}
 
+	expSecs := h.getJWTExpirationSeconds()
 	response.Success(c, gin.H{
 		// keep OAuth response for existing clients, but also return "token" for web app
 		"access_token": token,
 		"token":        token,
 		"token_type":   "Bearer",
-		"expires_in":   604800,
+		"expires_in":   expSecs,
 		"user": gin.H{
 			"id":         userModel.ID,
 			"email":      userModel.Email,
@@ -195,8 +212,10 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	expSecs := h.getJWTExpirationSeconds()
 	response.Success(c, gin.H{
-		"token": token,
+		"token":      token,
+		"expires_in": expSecs,
 		"user": gin.H{
 			"id":         userModel.ID,
 			"email":      userModel.Email,
@@ -247,8 +266,10 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	expSecs := h.getJWTExpirationSeconds()
 	response.Success(c, gin.H{
-		"token": token,
+		"token":      token,
+		"expires_in": expSecs,
 		"user": gin.H{
 			"id":         userModel.ID,
 			"email":      userModel.Email,

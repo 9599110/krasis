@@ -18,6 +18,7 @@ const config = ref({
   enable_sharing: true,
   enable_ai: true,
   maintenance_mode: false,
+  jwt_expiration_days: 7,
 })
 
 onMounted(() => { fetchConfig() })
@@ -104,6 +105,11 @@ function formatBytes(bytes: number) {
 
         <t-form-item label="会话有效期(天)">
           <t-input-number v-model="config.session_duration_days" :min="1" :max="365" style="width: 200px;" />
+        </t-form-item>
+
+        <t-form-item label="JWT 有效期(天)">
+          <t-input-number v-model="config.jwt_expiration_days" :min="1" :max="365" style="width: 200px;" />
+          <span class="help-text">Token 过期时间，修改后新登录用户生效</span>
         </t-form-item>
 
         <t-form-item label="每用户最大设备数">
