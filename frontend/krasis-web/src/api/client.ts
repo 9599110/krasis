@@ -1,7 +1,6 @@
 import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios'
 import type { ApiResponse } from './types'
-import router from '../router'
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
