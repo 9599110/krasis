@@ -136,7 +136,7 @@ func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, fol
 	offset := (page - 1) * size
 	args = append(args, size, offset)
 	query := fmt.Sprintf(`
-		SELECT id, title, content, owner_id, folder_id, version,
+		SELECT id, title, LEFT(content, 200), owner_id, folder_id, version,
 			   is_public, created_at, updated_at
 		FROM notes %s
 		ORDER BY %s %s

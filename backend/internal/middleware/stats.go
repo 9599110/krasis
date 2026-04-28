@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -10,6 +11,7 @@ import (
 )
 
 // StatsMiddleware counts requests for specific endpoint categories using Redis.
+// Redis operations are fire-and-forget to avoid blocking the response.
 func StatsMiddleware(rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
@@ -20,6 +22,8 @@ func StatsMiddleware(rdb *redis.Client) gin.HandlerFunc {
 
 		path := c.Request.URL.Path
 		today := time.Now().Format("2006-01-02")
+		ctx := context.Background()
+		expireAt := time.Now().AddDate(0, 0, 1)
 
 		var key string
 		switch {
@@ -36,21 +40,14 @@ func StatsMiddleware(rdb *redis.Client) gin.HandlerFunc {
 		}
 
 		if key != "" {
-			tomorrow := time.Now().AddDate(0, 0, 1)
-			pipe := rdb.Pipeline()
-			pipe.Incr(c.Request.Context(), key)
-			pipe.ExpireAt(c.Request.Context(), key, tomorrow)
-			_, _ = pipe.Exec(c.Request.Context())
+			_ = rdb.Incr(ctx, key).Err()
+			rdb.ExpireAt(ctx, key, expireAt)
 		}
 
-		// Track active users using Redis Set (unique user IDs per day)
 		if userID := c.GetString("user_id"); userID != "" {
 			userKey := fmt.Sprintf("stats:active_users:%s", today)
-			userTomorrow := time.Now().AddDate(0, 0, 1)
-			userPipe := rdb.Pipeline()
-			userPipe.SAdd(c.Request.Context(), userKey, userID)
-			userPipe.ExpireAt(c.Request.Context(), userKey, userTomorrow)
-			_, _ = userPipe.Exec(c.Request.Context())
+			_ = rdb.SAdd(ctx, userKey, userID).Err()
+			rdb.ExpireAt(ctx, userKey, expireAt)
 		}
 	}
 }
