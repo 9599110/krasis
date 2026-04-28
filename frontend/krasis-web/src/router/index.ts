@@ -137,18 +137,15 @@ router.beforeEach(async (to) => {
   }
 
   // If has token but no user loaded, validate token via /auth/me
-  // Only redirect to login on 401 (actual auth failure), not on network errors
   if (to.meta.requiresAuth && token) {
     try {
       await authStore.me()
     } catch (e: any) {
-      // Only clear auth and redirect if it's a 401 (token invalid/expired)
-      // For other errors (network, server), let the user stay on the page
       if (e?.response?.status === 401) {
         authStore.$patch({ token: null, user: null })
         return { name: 'login', query: { redirect: to.fullPath } }
       }
-      // For other errors, don't block the navigation
+      // Network/server error: let navigation proceed, don't block the user
       console.warn('Auth check failed:', e)
     }
   }

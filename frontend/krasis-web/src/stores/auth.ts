@@ -57,18 +57,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function me() {
-    try {
-      const res = await apiClient.get<ApiResponse<User>>('/auth/me')
-      user.value = res.data.data
-      localStorage.setItem('auth_user', JSON.stringify(res.data.data))
-      return res.data.data
-    } catch {
-      token.value = null
-      user.value = null
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
-      throw new Error('Not authenticated')
-    }
+    const res = await apiClient.get<ApiResponse<User>>('/auth/me')
+    user.value = res.data.data
+    localStorage.setItem('auth_user', JSON.stringify(res.data.data))
+    return res.data.data
   }
 
   function getOAuthUrl(provider: string) {
