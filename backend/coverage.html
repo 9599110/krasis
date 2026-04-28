@@ -1,0 +1,4361 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>auditlog: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/krasis/krasis/internal/auditlog/model.go (0.0%)</option>
+				
+				<option value="file1">github.com/krasis/krasis/internal/auth/handler.go (10.0%)</option>
+				
+				<option value="file2">github.com/krasis/krasis/internal/auth/jwt.go (87.5%)</option>
+				
+				<option value="file3">github.com/krasis/krasis/internal/auth/oauth.go (16.4%)</option>
+				
+				<option value="file4">github.com/krasis/krasis/internal/auth/session.go (56.6%)</option>
+				
+				<option value="file5">github.com/krasis/krasis/internal/config/config.go (95.5%)</option>
+				
+				<option value="file6">github.com/krasis/krasis/internal/file/handler.go (90.0%)</option>
+				
+				<option value="file7">github.com/krasis/krasis/internal/file/model.go (0.0%)</option>
+				
+				<option value="file8">github.com/krasis/krasis/internal/file/service.go (0.0%)</option>
+				
+				<option value="file9">github.com/krasis/krasis/internal/folder/handler.go (62.7%)</option>
+				
+				<option value="file10">github.com/krasis/krasis/internal/folder/model.go (0.0%)</option>
+				
+				<option value="file11">github.com/krasis/krasis/internal/folder/service.go (100.0%)</option>
+				
+				<option value="file12">github.com/krasis/krasis/internal/group/model.go (0.0%)</option>
+				
+				<option value="file13">github.com/krasis/krasis/internal/note/handler.go (59.2%)</option>
+				
+				<option value="file14">github.com/krasis/krasis/internal/note/model.go (0.0%)</option>
+				
+				<option value="file15">github.com/krasis/krasis/internal/note/service.go (50.6%)</option>
+				
+				<option value="file16">github.com/krasis/krasis/internal/share/handler.go (0.0%)</option>
+				
+				<option value="file17">github.com/krasis/krasis/internal/share/model.go (4.5%)</option>
+				
+				<option value="file18">github.com/krasis/krasis/internal/share/service.go (0.0%)</option>
+				
+				<option value="file19">github.com/krasis/krasis/internal/user/handler.go (20.5%)</option>
+				
+				<option value="file20">github.com/krasis/krasis/internal/user/model.go (0.0%)</option>
+				
+				<option value="file21">github.com/krasis/krasis/internal/user/service.go (0.0%)</option>
+				
+				<option value="file22">github.com/krasis/krasis/pkg/response/response.go (100.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package auditlog
+
+import (
+        "context"
+        "database/sql"
+        "encoding/json"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+type AuditLog struct {
+        ID            uuid.UUID       `json:"id"`
+        Action        string          `json:"action"`
+        TargetType    sql.NullString  `json:"target_type"`
+        TargetID      uuid.NullUUID   `json:"target_id"`
+        AdminID       uuid.UUID       `json:"admin_id"`
+        AdminUsername sql.NullString  `json:"admin_username"`
+        Changes       json.RawMessage `json:"changes,omitempty"`
+        IPAddress     sql.NullString  `json:"ip_address"`
+        UserAgent     sql.NullString  `json:"user_agent"`
+        CreatedAt     time.Time       `json:"created_at"`
+}
+
+type Repository struct {
+        pool *pgxpool.Pool
+}
+
+func NewRepository(pool *pgxpool.Pool) *Repository <span class="cov0" title="0">{
+        return &amp;Repository{pool: pool}
+}</span>
+
+func (r *Repository) List(ctx context.Context, action, userID string, startDate, endDate string, page, size int) ([]AuditLog, int64, error) <span class="cov0" title="0">{
+        if page &lt; 1 </span><span class="cov0" title="0">{
+                page = 1
+        }</span>
+        <span class="cov0" title="0">if size &lt; 1 || size &gt; 100 </span><span class="cov0" title="0">{
+                size = 20
+        }</span>
+        <span class="cov0" title="0">offset := (page - 1) * size
+
+        where := "WHERE 1=1"
+        args := []interface{}{}
+        idx := 1
+
+        if action != "" </span><span class="cov0" title="0">{
+                where += " AND action LIKE $1"
+                args = append(args, "%"+action+"%")
+                idx++
+        }</span>
+        <span class="cov0" title="0">if userID != "" </span><span class="cov0" title="0">{
+                where += " AND admin_id = $" + string(rune('0'+idx))
+                args = append(args, userID)
+                idx++
+        }</span>
+        <span class="cov0" title="0">if startDate != "" </span><span class="cov0" title="0">{
+                where += " AND created_at &gt;= $" + string(rune('0'+idx))
+                args = append(args, startDate)
+                idx++
+        }</span>
+        <span class="cov0" title="0">if endDate != "" </span><span class="cov0" title="0">{
+                where += " AND created_at &lt;= $" + string(rune('0'+idx))
+                args = append(args, endDate)
+                idx++
+        }</span>
+
+        <span class="cov0" title="0">var total int64
+        countQuery := "SELECT COUNT(*) FROM audit_logs " + where
+        if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&amp;total); err != nil </span><span class="cov0" title="0">{
+                return nil, 0, err
+        }</span>
+
+        <span class="cov0" title="0">query := "SELECT id, action, target_type, target_id, admin_id, admin_username, changes, ip_address, user_agent, created_at FROM audit_logs " + where + " ORDER BY created_at DESC LIMIT $" + string(rune('0'+idx)) + " OFFSET $" + string(rune('0'+idx+1))
+        args = append(args, size, offset)
+
+        rows, err := r.pool.Query(ctx, query, args...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, 0, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var logs []AuditLog
+        for rows.Next() </span><span class="cov0" title="0">{
+                var log AuditLog
+                if err := rows.Scan(&amp;log.ID, &amp;log.Action, &amp;log.TargetType, &amp;log.TargetID, &amp;log.AdminID, &amp;log.AdminUsername, &amp;log.Changes, &amp;log.IPAddress, &amp;log.UserAgent, &amp;log.CreatedAt); err != nil </span><span class="cov0" title="0">{
+                        return nil, 0, err
+                }</span>
+                <span class="cov0" title="0">logs = append(logs, log)</span>
+        }
+        <span class="cov0" title="0">if logs == nil </span><span class="cov0" title="0">{
+                logs = []AuditLog{}
+        }</span>
+        <span class="cov0" title="0">return logs, total, rows.Err()</span>
+}
+
+func (r *Repository) Create(ctx context.Context, log *AuditLog) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx, `
+                INSERT INTO audit_logs (action, target_type, target_id, admin_id, admin_username, changes, ip_address, user_agent)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `, log.Action, log.TargetType, log.TargetID, log.AdminID, log.AdminUsername, log.Changes, log.IPAddress, log.UserAgent)
+        return err
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package auth
+
+import (
+        "context"
+        "fmt"
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/internal/user"
+        "github.com/krasis/krasis/pkg/response"
+)
+
+type Handler struct {
+        oauthManager   *OAuthManager
+        jwtManager     *JWTManager
+        sessionManager *SessionManager
+        userService    *user.UserService
+}
+
+func NewHandler(om *OAuthManager, jm *JWTManager, sm *SessionManager, us *user.UserService) *Handler <span class="cov8" title="1">{
+        return &amp;Handler{
+                oauthManager:   om,
+                jwtManager:     jm,
+                sessionManager: sm,
+                userService:    us,
+        }
+}</span>
+
+// GitHubLogin redirects to GitHub OAuth.
+func (h *Handler) GitHubLogin(c *gin.Context) <span class="cov8" title="1">{
+        state := uuid.New().String()
+
+        url, err := h.oauthManager.GetAuthURL(ProviderGitHub, state)
+        if err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取 OAuth 地址失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">c.Redirect(http.StatusFound, url)</span>
+}
+
+// GitHubCallback handles GitHub OAuth callback.
+func (h *Handler) GitHubCallback(c *gin.Context) <span class="cov0" title="0">{
+        code := c.Query("code")
+        if code == "" </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "缺少授权码")
+                return
+        }</span>
+
+        <span class="cov0" title="0">tokenResp, err := h.oauthManager.ExchangeCode(c, ProviderGitHub, code)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "交换 Token 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">userInfo, err := h.oauthManager.GetUserInfo(c, ProviderGitHub, tokenResp.AccessToken)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取用户信息失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">h.handleOAuthLogin(c, userInfo)</span>
+}
+
+// GoogleLogin redirects to Google OAuth.
+func (h *Handler) GoogleLogin(c *gin.Context) <span class="cov8" title="1">{
+        state := uuid.New().String()
+
+        url, err := h.oauthManager.GetAuthURL(ProviderGoogle, state)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取 OAuth 地址失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">c.Redirect(http.StatusFound, url)</span>
+}
+
+// GoogleCallback handles Google OAuth callback.
+func (h *Handler) GoogleCallback(c *gin.Context) <span class="cov0" title="0">{
+        code := c.Query("code")
+        if code == "" </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "缺少授权码")
+                return
+        }</span>
+
+        <span class="cov0" title="0">tokenResp, err := h.oauthManager.ExchangeCode(c, ProviderGoogle, code)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "交换 Token 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">userInfo, err := h.oauthManager.GetUserInfo(c, ProviderGoogle, tokenResp.AccessToken)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取用户信息失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">h.handleOAuthLogin(c, userInfo)</span>
+}
+
+func (h *Handler) handleOAuthLogin(c *gin.Context, userInfo *UserInfo) <span class="cov0" title="0">{
+        userModel, err := h.userService.GetOrCreateByOAuth(
+                c, userInfo.Email, userInfo.Username, userInfo.AvatarURL,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, fmt.Sprintf("创建用户失败: %v", err))
+                return
+        }</span>
+
+        <span class="cov0" title="0">role, err := h.userService.GetRole(c, userModel.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                role = "member"
+        }</span>
+
+        <span class="cov0" title="0">info := &amp;SessionInfo{
+                UserAgent: c.GetHeader("User-Agent"),
+                IPAddress: c.ClientIP(),
+        }
+        session, err := h.sessionManager.Create(c, userModel.ID.String(), info)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "创建 Session 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">token, err := h.jwtManager.Generate(userModel.ID.String(), role, session.SessionID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "生成 Token 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                // keep OAuth response for existing clients, but also return "token" for web app
+                "access_token": token,
+                "token":        token,
+                "token_type":   "Bearer",
+                "expires_in":   604800,
+                "user": gin.H{
+                        "id":         userModel.ID,
+                        "email":      userModel.Email,
+                        "username":   userModel.Username,
+                        "name":       userModel.Username,
+                        "avatar_url": userModel.AvatarURL,
+                        "role":       role,
+                },
+        })</span>
+}
+
+// Register handles local registration with username, email and password.
+func (h *Handler) Register(c *gin.Context) <span class="cov0" title="0">{
+        var req struct {
+                Username string `json:"username"`
+                Email    string `json:"email"`
+                Password string `json:"password"`
+                Name     string `json:"name"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov0" title="0">userModel, err := h.userService.RegisterLocal(c, req.Email, req.Username, req.Password)
+        if err != nil </span><span class="cov0" title="0">{
+                // best-effort mapping
+                if err.Error() == "email already exists" </span><span class="cov0" title="0">{
+                        response.Error(c, 409, response.ErrConflict, "邮箱已注册")
+                        return
+                }</span>
+                <span class="cov0" title="0">if err.Error() == "password too short" </span><span class="cov0" title="0">{
+                        response.Error(c, 422, response.ErrUnprocessableEntity, "密码至少 6 位")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 400, response.ErrBadRequest, err.Error())
+                return</span>
+        }
+
+        <span class="cov0" title="0">role, err := h.userService.GetRole(c, userModel.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                role = "member"
+        }</span>
+
+        <span class="cov0" title="0">info := &amp;SessionInfo{
+                UserAgent: c.GetHeader("User-Agent"),
+                IPAddress: c.ClientIP(),
+        }
+        session, err := h.sessionManager.Create(c, userModel.ID.String(), info)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "创建 Session 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">token, err := h.jwtManager.Generate(userModel.ID.String(), role, session.SessionID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "生成 Token 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                "token": token,
+                "user": gin.H{
+                        "id":         userModel.ID,
+                        "email":      userModel.Email,
+                        "username":   userModel.Username,
+                        "name":       userModel.Username,
+                        "avatar_url": userModel.AvatarURL,
+                        "role":       role,
+                        "created_at": userModel.CreatedAt,
+                },
+        })</span>
+}
+
+// Login handles local username/password login.
+func (h *Handler) Login(c *gin.Context) <span class="cov0" title="0">{
+        var req struct {
+                Username string `json:"username"`
+                Password string `json:"password"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov0" title="0">userModel, err := h.userService.AuthenticateByUsername(c, req.Username, req.Password)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 401, response.ErrUnauthorized, "账号或密码错误")
+                return
+        }</span>
+
+        <span class="cov0" title="0">role, err := h.userService.GetRole(c, userModel.ID)
+        if err != nil </span><span class="cov0" title="0">{
+                role = "member"
+        }</span>
+
+        <span class="cov0" title="0">info := &amp;SessionInfo{
+                UserAgent: c.GetHeader("User-Agent"),
+                IPAddress: c.ClientIP(),
+        }
+        session, err := h.sessionManager.Create(c, userModel.ID.String(), info)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "创建 Session 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">token, err := h.jwtManager.Generate(userModel.ID.String(), role, session.SessionID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "生成 Token 失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                "token": token,
+                "user": gin.H{
+                        "id":         userModel.ID,
+                        "email":      userModel.Email,
+                        "username":   userModel.Username,
+                        "name":       userModel.Username,
+                        "avatar_url": userModel.AvatarURL,
+                        "role":       role,
+                        "created_at": userModel.CreatedAt,
+                },
+        })</span>
+}
+
+func (h *Handler) Logout(c *gin.Context) <span class="cov0" title="0">{
+        sessionID := c.GetString("session_id")
+        if sessionID == "" </span><span class="cov0" title="0">{
+                response.Success(c, nil)
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.sessionManager.Delete(context.Background(), sessionID); err != nil </span>{<span class="cov0" title="0">
+                // Session may already be deleted; continue anyway
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package auth
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "time"
+
+        "github.com/golang-jwt/jwt/v5"
+        "github.com/google/uuid"
+        "github.com/redis/go-redis/v9"
+)
+
+var (
+        ErrInvalidToken      = errors.New("invalid token")
+        ErrTokenRevoked      = errors.New("token has been revoked")
+        ErrInvalidSigningMethod = errors.New("invalid signing method")
+)
+
+type Claims struct {
+        UserID    string `json:"user_id"`
+        Role      string `json:"role"`
+        SessionID string `json:"session_id"`
+        JTI       string `json:"jti"`
+        jwt.RegisteredClaims
+}
+
+type JWTManager struct {
+        secretKey     []byte
+        tokenDuration time.Duration
+        issuer        string
+        redis         *redis.Client
+}
+
+func NewJWTManager(secret string, tokenDuration time.Duration, issuer string, redis *redis.Client) *JWTManager <span class="cov8" title="1">{
+        return &amp;JWTManager{
+                secretKey:     []byte(secret),
+                tokenDuration: tokenDuration,
+                issuer:        issuer,
+                redis:         redis,
+        }
+}</span>
+
+func (m *JWTManager) Generate(userID, role, sessionID string) (string, error) <span class="cov8" title="1">{
+        now := time.Now()
+        claims := &amp;Claims{
+                UserID:    userID,
+                Role:      role,
+                SessionID: sessionID,
+                JTI:       uuid.New().String(),
+                RegisteredClaims: jwt.RegisteredClaims{
+                        Issuer:    m.issuer,
+                        Subject:   userID,
+                        IssuedAt:  jwt.NewNumericDate(now),
+                        ExpiresAt: jwt.NewNumericDate(now.Add(m.tokenDuration)),
+                },
+        }
+
+        token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+        return token.SignedString(m.secretKey)
+}</span>
+
+func (m *JWTManager) Validate(tokenString string) (*Claims, error) <span class="cov8" title="1">{
+        token, err := jwt.ParseWithClaims(tokenString, &amp;Claims{}, func(token *jwt.Token) (interface{}, error) </span><span class="cov8" title="1">{
+                if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok </span><span class="cov0" title="0">{
+                        return nil, ErrInvalidSigningMethod
+                }</span>
+                <span class="cov8" title="1">return m.secretKey, nil</span>
+        })
+
+        <span class="cov8" title="1">if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("%w: %v", ErrInvalidToken, err)
+        }</span>
+
+        <span class="cov8" title="1">claims, ok := token.Claims.(*Claims)
+        if !ok || !token.Valid </span><span class="cov0" title="0">{
+                return nil, ErrInvalidToken
+        }</span>
+
+        // Check blacklist
+        <span class="cov8" title="1">if m.IsBlacklisted(claims.JTI) </span><span class="cov8" title="1">{
+                return nil, ErrTokenRevoked
+        }</span>
+
+        <span class="cov8" title="1">return claims, nil</span>
+}
+
+func (m *JWTManager) Blacklist(ctx context.Context, jti string, ttl time.Duration) error <span class="cov8" title="1">{
+        key := fmt.Sprintf("jwt_blacklist:%s", jti)
+        return m.redis.Set(ctx, key, "1", ttl).Err()
+}</span>
+
+func (m *JWTManager) IsBlacklisted(jti string) bool <span class="cov8" title="1">{
+        ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+        defer cancel()
+        key := fmt.Sprintf("jwt_blacklist:%s", jti)
+        val, err := m.redis.Get(ctx, key).Result()
+        return err == nil &amp;&amp; val == "1"
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package auth
+
+import (
+        "context"
+        "encoding/json"
+        "errors"
+        "fmt"
+        "io"
+        "net/http"
+        "net/url"
+        "time"
+)
+
+type Provider string
+
+const (
+        ProviderGitHub Provider = "github"
+        ProviderGoogle Provider = "google"
+)
+
+var ErrUnknownProvider = errors.New("unknown oauth provider")
+
+type OAuthConfig struct {
+        ClientID     string
+        ClientSecret string
+        RedirectURI  string
+        Scopes       []string
+}
+
+type TokenResponse struct {
+        AccessToken string `json:"access_token"`
+        TokenType   string `json:"token_type"`
+        ExpiresIn   int    `json:"expires_in"`
+}
+
+type UserInfo struct {
+        ProviderUserID string `json:"provider_user_id"`
+        Email          string `json:"email"`
+        Username       string `json:"username"`
+        AvatarURL      string `json:"avatar_url"`
+}
+
+type OAuthManager struct {
+        configs    map[Provider]OAuthConfig
+        httpClient *http.Client
+}
+
+func NewOAuthManager(configs map[Provider]OAuthConfig) *OAuthManager <span class="cov8" title="1">{
+        return &amp;OAuthManager{
+                configs:    configs,
+                httpClient: &amp;http.Client{Timeout: 30 * time.Second},
+        }
+}</span>
+
+func (m *OAuthManager) GetAuthURL(provider Provider, state string) (string, error) <span class="cov8" title="1">{
+        config, ok := m.configs[provider]
+        if !ok </span><span class="cov8" title="1">{
+                return "", ErrUnknownProvider
+        }</span>
+
+        <span class="cov8" title="1">switch provider </span>{
+        case ProviderGitHub:<span class="cov8" title="1">
+                params := url.Values{}
+                params.Set("client_id", config.ClientID)
+                params.Set("redirect_uri", config.RedirectURI)
+                params.Set("scope", "user:email")
+                params.Set("state", state)
+                return fmt.Sprintf("https://github.com/login/oauth/authorize?%s", params.Encode()), nil</span>
+        case ProviderGoogle:<span class="cov8" title="1">
+                params := url.Values{}
+                params.Set("client_id", config.ClientID)
+                params.Set("redirect_uri", config.RedirectURI)
+                params.Set("response_type", "code")
+                params.Set("scope", "email profile")
+                params.Set("state", state)
+                return fmt.Sprintf("https://accounts.google.com/o/oauth2/v2/auth?%s", params.Encode()), nil</span>
+        default:<span class="cov0" title="0">
+                return "", ErrUnknownProvider</span>
+        }
+}
+
+func (m *OAuthManager) ExchangeCode(ctx context.Context, provider Provider, code string) (*TokenResponse, error) <span class="cov0" title="0">{
+        config, ok := m.configs[provider]
+        if !ok </span><span class="cov0" title="0">{
+                return nil, ErrUnknownProvider
+        }</span>
+
+        <span class="cov0" title="0">switch provider </span>{
+        case ProviderGitHub:<span class="cov0" title="0">
+                return m.exchangeGitHubCode(ctx, config, code)</span>
+        case ProviderGoogle:<span class="cov0" title="0">
+                return m.exchangeGoogleCode(ctx, config, code)</span>
+        default:<span class="cov0" title="0">
+                return nil, ErrUnknownProvider</span>
+        }
+}
+
+func (m *OAuthManager) GetUserInfo(ctx context.Context, provider Provider, accessToken string) (*UserInfo, error) <span class="cov0" title="0">{
+        switch provider </span>{
+        case ProviderGitHub:<span class="cov0" title="0">
+                return m.getGitHubUserInfo(ctx, accessToken)</span>
+        case ProviderGoogle:<span class="cov0" title="0">
+                return m.getGoogleUserInfo(ctx, accessToken)</span>
+        default:<span class="cov0" title="0">
+                return nil, ErrUnknownProvider</span>
+        }
+}
+
+func (m *OAuthManager) exchangeGitHubCode(ctx context.Context, cfg OAuthConfig, code string) (*TokenResponse, error) <span class="cov0" title="0">{
+        form := url.Values{}
+        form.Set("client_id", cfg.ClientID)
+        form.Set("client_secret", cfg.ClientSecret)
+        form.Set("code", code)
+        form.Set("redirect_uri", cfg.RedirectURI)
+
+        req, err := http.NewRequestWithContext(ctx, "POST", "https://github.com/login/oauth/access_token", nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+        req.Header.Set("Accept", "application/json")
+        req.Body = io.NopCloser(nil)
+
+        resp, err := m.httpClient.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        var tokenResp TokenResponse
+        if err := json.NewDecoder(resp.Body).Decode(&amp;tokenResp); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("decode github token response: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;tokenResp, nil</span>
+}
+
+func (m *OAuthManager) exchangeGoogleCode(ctx context.Context, cfg OAuthConfig, code string) (*TokenResponse, error) <span class="cov0" title="0">{
+        form := url.Values{}
+        form.Set("code", code)
+        form.Set("client_id", cfg.ClientID)
+        form.Set("client_secret", cfg.ClientSecret)
+        form.Set("redirect_uri", cfg.RedirectURI)
+        form.Set("grant_type", "authorization_code")
+
+        req, err := http.NewRequestWithContext(ctx, "POST", "https://oauth2.googleapis.com/token", nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+        req.Body = io.NopCloser(nil)
+
+        resp, err := m.httpClient.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        var tokenResp TokenResponse
+        if err := json.NewDecoder(resp.Body).Decode(&amp;tokenResp); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("decode google token response: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;tokenResp, nil</span>
+}
+
+func (m *OAuthManager) getGitHubUserInfo(ctx context.Context, accessToken string) (*UserInfo, error) <span class="cov0" title="0">{
+        req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user", nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Authorization", "Bearer "+accessToken)
+        req.Header.Set("Accept", "application/json")
+
+        resp, err := m.httpClient.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        var result struct {
+                ID        int    `json:"id"`
+                Login     string `json:"login"`
+                Email     string `json:"email"`
+                AvatarURL string `json:"avatar_url"`
+        }
+        if err := json.NewDecoder(resp.Body).Decode(&amp;result); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // If email is null, fetch from emails endpoint
+        <span class="cov0" title="0">email := result.Email
+        if email == "" </span><span class="cov0" title="0">{
+                email = m.getGitHubPrimaryEmail(ctx, accessToken)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;UserInfo{
+                ProviderUserID: fmt.Sprintf("github:%d", result.ID),
+                Email:          email,
+                Username:       result.Login,
+                AvatarURL:      result.AvatarURL,
+        }, nil</span>
+}
+
+func (m *OAuthManager) getGitHubPrimaryEmail(ctx context.Context, accessToken string) string <span class="cov0" title="0">{
+        req, _ := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/user/emails", nil)
+        req.Header.Set("Authorization", "Bearer "+accessToken)
+        req.Header.Set("Accept", "application/json")
+
+        resp, err := m.httpClient.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        var emails []struct {
+                Email    string `json:"email"`
+                Primary  bool   `json:"primary"`
+                Verified bool   `json:"verified"`
+        }
+        if err := json.NewDecoder(resp.Body).Decode(&amp;emails); err != nil </span><span class="cov0" title="0">{
+                return ""
+        }</span>
+
+        <span class="cov0" title="0">for _, e := range emails </span><span class="cov0" title="0">{
+                if e.Primary &amp;&amp; e.Verified </span><span class="cov0" title="0">{
+                        return e.Email
+                }</span>
+        }
+        <span class="cov0" title="0">return ""</span>
+}
+
+func (m *OAuthManager) getGoogleUserInfo(ctx context.Context, accessToken string) (*UserInfo, error) <span class="cov0" title="0">{
+        req, err := http.NewRequestWithContext(ctx, "GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">req.Header.Set("Authorization", "Bearer "+accessToken)
+
+        resp, err := m.httpClient.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer resp.Body.Close()
+
+        var result struct {
+                ID        string `json:"id"`
+                Email     string `json:"email"`
+                Name      string `json:"name"`
+                Picture   string `json:"picture"`
+                Verified  bool   `json:"verified_email"`
+        }
+        if err := json.NewDecoder(resp.Body).Decode(&amp;result); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">return &amp;UserInfo{
+                ProviderUserID: "google:" + result.ID,
+                Email:          result.Email,
+                Username:       result.Name,
+                AvatarURL:      result.Picture,
+        }, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package auth
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "strings"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/redis/go-redis/v9"
+)
+
+var ErrSessionNotFound = errors.New("session not found")
+
+type Session struct {
+        SessionID  string    `json:"session_id"`
+        UserID     string    `json:"user_id"`
+        UserAgent  string    `json:"user_agent"`
+        IPAddress  string    `json:"ip_address"`
+        DeviceName string    `json:"device_name"`
+        DeviceType string    `json:"device_type"`
+        LastActive time.Time `json:"last_active_at"`
+        CreatedAt  time.Time `json:"created_at"`
+        ExpiresAt  time.Time `json:"expires_at"`
+        IsCurrent  bool      `json:"is_current"`
+}
+
+type SessionInfo struct {
+        UserAgent string
+        IPAddress string
+}
+
+type SessionManager struct {
+        redis    *redis.Client
+        duration time.Duration
+}
+
+func NewSessionManager(redis *redis.Client, duration time.Duration) *SessionManager <span class="cov8" title="1">{
+        return &amp;SessionManager{
+                redis:    redis,
+                duration: duration,
+        }
+}</span>
+
+func (m *SessionManager) Create(ctx context.Context, userID string, info *SessionInfo) (*Session, error) <span class="cov8" title="1">{
+        sessionID := uuid.New().String()
+        now := time.Now()
+        session := &amp;Session{
+                SessionID:  sessionID,
+                UserID:     userID,
+                UserAgent:  info.UserAgent,
+                IPAddress:  info.IPAddress,
+                DeviceName: detectDeviceName(info.UserAgent),
+                DeviceType: detectDeviceType(info.UserAgent),
+                LastActive: now,
+                CreatedAt:  now,
+                ExpiresAt:  now.Add(m.duration),
+        }
+
+        key := fmt.Sprintf("session:%s", sessionID)
+        pipe := m.redis.Pipeline()
+        pipe.HSet(ctx, key, map[string]interface{}{
+                "user_id":      session.UserID,
+                "user_agent":   session.UserAgent,
+                "ip_address":   session.IPAddress,
+                "device_name":  session.DeviceName,
+                "device_type":  session.DeviceType,
+                "last_active":  session.LastActive.Format(time.RFC3339),
+                "created_at":   session.CreatedAt.Format(time.RFC3339),
+                "expires_at":   session.ExpiresAt.Format(time.RFC3339),
+        })
+        pipe.Expire(ctx, key, m.duration)
+        pipe.SAdd(ctx, fmt.Sprintf("user_sessions:%s", userID), sessionID)
+        _, err := pipe.Exec(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("create session: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return session, nil</span>
+}
+
+func (m *SessionManager) Get(ctx context.Context, sessionID string) (*Session, error) <span class="cov8" title="1">{
+        key := fmt.Sprintf("session:%s", sessionID)
+        data, err := m.redis.HGetAll(ctx, key).Result()
+        if err != nil || len(data) == 0 </span><span class="cov0" title="0">{
+                return nil, ErrSessionNotFound
+        }</span>
+
+        <span class="cov8" title="1">return parseSession(data), nil</span>
+}
+
+func (m *SessionManager) Delete(ctx context.Context, sessionID string) error <span class="cov8" title="1">{
+        session, err := m.Get(ctx, sessionID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov8" title="1">pipe := m.redis.Pipeline()
+        pipe.Del(ctx, fmt.Sprintf("session:%s", sessionID))
+        pipe.SRem(ctx, fmt.Sprintf("user_sessions:%s", session.UserID), sessionID)
+        _, err = pipe.Exec(ctx)
+        return err</span>
+}
+
+func (m *SessionManager) GetUserSessions(ctx context.Context, userID string, currentSessionID string) ([]*Session, error) <span class="cov0" title="0">{
+        sessionIDs, err := m.redis.SMembers(ctx, fmt.Sprintf("user_sessions:%s", userID)).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("get user sessions: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">sessions := make([]*Session, 0, len(sessionIDs))
+        for _, id := range sessionIDs </span><span class="cov0" title="0">{
+                session, err := m.Get(ctx, id)
+                if err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">if id == currentSessionID </span><span class="cov0" title="0">{
+                        session.IsCurrent = true
+                }</span>
+                <span class="cov0" title="0">sessions = append(sessions, session)</span>
+        }
+
+        <span class="cov0" title="0">return sessions, nil</span>
+}
+
+func (m *SessionManager) Refresh(ctx context.Context, sessionID string) error <span class="cov0" title="0">{
+        key := fmt.Sprintf("session:%s", sessionID)
+        return m.redis.HSet(ctx, key, "last_active", time.Now().Format(time.RFC3339)).Err()
+}</span>
+
+// GetUserSessionsMap returns sessions as maps (for interface compatibility).
+func (m *SessionManager) GetUserSessionsMap(ctx context.Context, userID, currentSessionID string) ([]map[string]interface{}, error) <span class="cov8" title="1">{
+        sessionIDs, err := m.redis.SMembers(ctx, fmt.Sprintf("user_sessions:%s", userID)).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("get user sessions: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">result := make([]map[string]interface{}, 0, len(sessionIDs))
+        for _, id := range sessionIDs </span><span class="cov8" title="1">{
+                session, err := m.Get(ctx, id)
+                if err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">m := map[string]interface{}{
+                        "session_id":   session.SessionID,
+                        "user_id":      session.UserID,
+                        "device_name":  session.DeviceName,
+                        "device_type":  session.DeviceType,
+                        "ip_address":   session.IPAddress,
+                        "user_agent":   session.UserAgent,
+                        "last_active":  session.LastActive,
+                        "created_at":   session.CreatedAt,
+                        "expires_at":   session.ExpiresAt,
+                        "is_current":   id == currentSessionID,
+                }
+                result = append(result, m)</span>
+        }
+
+        <span class="cov8" title="1">return result, nil</span>
+}
+
+// DeleteSession is an adapter for the user.SessionManager interface.
+func (m *SessionManager) DeleteSession(ctx context.Context, sessionID string) error <span class="cov8" title="1">{
+        return m.Delete(ctx, sessionID)
+}</span>
+
+func (m *SessionManager) DeleteAllForUser(ctx context.Context, userID string) error <span class="cov0" title="0">{
+        sessions, err := m.GetUserSessions(ctx, userID, "")
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">pipe := m.redis.Pipeline()
+        for _, s := range sessions </span><span class="cov0" title="0">{
+                pipe.Del(ctx, fmt.Sprintf("session:%s", s.SessionID))
+        }</span>
+        <span class="cov0" title="0">pipe.Del(ctx, fmt.Sprintf("user_sessions:%s", userID))
+        _, err = pipe.Exec(ctx)
+        return err</span>
+}
+
+func parseSession(data map[string]string) *Session <span class="cov8" title="1">{
+        lastActive, _ := time.Parse(time.RFC3339, data["last_active"])
+        createdAt, _ := time.Parse(time.RFC3339, data["created_at"])
+        expiresAt, _ := time.Parse(time.RFC3339, data["expires_at"])
+
+        return &amp;Session{
+                SessionID:  "",
+                UserID:     data["user_id"],
+                UserAgent:  data["user_agent"],
+                IPAddress:  data["ip_address"],
+                DeviceName: data["device_name"],
+                DeviceType: data["device_type"],
+                LastActive: lastActive,
+                CreatedAt:  createdAt,
+                ExpiresAt:  expiresAt,
+        }
+}</span>
+
+func detectDeviceName(ua string) string <span class="cov8" title="1">{
+        ua = strings.ToLower(ua)
+        if strings.Contains(ua, "iphone") || strings.Contains(ua, "android") </span><span class="cov0" title="0">{
+                if strings.Contains(ua, "iphone") </span><span class="cov0" title="0">{
+                        return "iPhone"
+                }</span>
+                <span class="cov0" title="0">return "Android"</span>
+        }
+        <span class="cov8" title="1">if strings.Contains(ua, "macintosh") || strings.Contains(ua, "mac os") </span><span class="cov0" title="0">{
+                return "Mac"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(ua, "windows") </span><span class="cov0" title="0">{
+                return "Windows"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(ua, "linux") </span><span class="cov0" title="0">{
+                return "Linux"
+        }</span>
+        <span class="cov8" title="1">return "Unknown Device"</span>
+}
+
+func detectDeviceType(ua string) string <span class="cov8" title="1">{
+        ua = strings.ToLower(ua)
+        if strings.Contains(ua, "iphone") || strings.Contains(ua, "android") || strings.Contains(ua, "mobile") </span><span class="cov0" title="0">{
+                return "mobile"
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(ua, "tablet") || strings.Contains(ua, "ipad") </span><span class="cov0" title="0">{
+                return "tablet"
+        }</span>
+        <span class="cov8" title="1">return "desktop"</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package config
+
+import (
+        "os"
+        "strings"
+
+        "github.com/spf13/viper"
+)
+
+type Config struct {
+        Server   ServerConfig   `mapstructure:"server"`
+        Database DatabaseConfig `mapstructure:"database"`
+        JWT      JWTConfig      `mapstructure:"jwt"`
+        OAuth    OAuthConfig    `mapstructure:"oauth"`
+        Storage  StorageConfig  `mapstructure:"storage"`
+        Log      LogConfig      `mapstructure:"log"`
+}
+
+type ServerConfig struct {
+        Port int    `mapstructure:"port"`
+        Mode string `mapstructure:"mode"`
+}
+
+type DatabaseConfig struct {
+        Postgres PostgresConfig `mapstructure:"postgres"`
+        Redis    RedisConfig    `mapstructure:"redis"`
+}
+
+type PostgresConfig struct {
+        Host            string `mapstructure:"host"`
+        Port            int    `mapstructure:"port"`
+        User            string `mapstructure:"user"`
+        Password        string `mapstructure:"password"`
+        DBName          string `mapstructure:"dbname"`
+        SSLMode         string `mapstructure:"sslmode"`
+        MaxOpenConns    int    `mapstructure:"max_open_conns"`
+        MaxIdleConns    int    `mapstructure:"max_idle_conns"`
+        ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`
+}
+
+type RedisConfig struct {
+        Addr     string `mapstructure:"addr"`
+        Password string `mapstructure:"password"`
+        DB       int    `mapstructure:"db"`
+        PoolSize int    `mapstructure:"pool_size"`
+}
+
+type JWTConfig struct {
+        Secret     string `mapstructure:"secret"`
+        Issuer     string `mapstructure:"issuer"`
+        Expiration int    `mapstructure:"expiration"`
+}
+
+type OAuthConfig struct {
+        GitHub OAuthProviderConfig `mapstructure:"github"`
+        Google OAuthProviderConfig `mapstructure:"google"`
+}
+
+type OAuthProviderConfig struct {
+        Enabled      bool   `mapstructure:"enabled"`
+        ClientID     string `mapstructure:"client_id"`
+        ClientSecret string `mapstructure:"client_secret"`
+        RedirectURI  string `mapstructure:"redirect_uri"`
+}
+
+type AIConfig struct {
+        Qdrant QdrantConfig `mapstructure:"qdrant"`
+}
+
+type QdrantConfig struct {
+        Endpoint   string `mapstructure:"endpoint"`
+        APIKey     string `mapstructure:"api_key"`
+        Collection string `mapstructure:"collection"`
+}
+
+type StorageConfig struct {
+        MinIO  MinIOConfig `mapstructure:"minio"`
+        AI     AIConfig    `mapstructure:"ai"`
+}
+
+type MinIOConfig struct {
+        Endpoint  string `mapstructure:"endpoint"`
+        AccessKey string `mapstructure:"access_key"`
+        SecretKey string `mapstructure:"secret_key"`
+        Bucket    string `mapstructure:"bucket"`
+        UseSSL    bool   `mapstructure:"use_ssl"`
+}
+
+type LogConfig struct {
+        Level  string `mapstructure:"level"`
+        Format string `mapstructure:"format"`
+}
+
+func Load() (*Config, error) <span class="cov8" title="1">{
+        v := viper.New()
+        v.SetConfigName("config")
+        v.SetConfigType("yaml")
+        v.AddConfigPath(".")
+        v.AddConfigPath("./config")
+
+        // Allow CONFIG_FILE env to override config path
+        if cfgFile := os.Getenv("CONFIG_FILE"); cfgFile != "" </span><span class="cov8" title="1">{
+                v.SetConfigFile(cfgFile)
+        }</span>
+
+        <span class="cov8" title="1">v.AutomaticEnv()
+        v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+        v.SetDefault("server.port", 8080)
+        v.SetDefault("server.mode", "debug")
+        v.SetDefault("database.postgres.host", "localhost")
+        v.SetDefault("database.postgres.port", 5432)
+        v.SetDefault("database.postgres.user", "postgres")
+        v.SetDefault("database.postgres.password", "postgres")
+        v.SetDefault("database.postgres.dbname", "krasis")
+        v.SetDefault("database.postgres.sslmode", "disable")
+        v.SetDefault("database.postgres.max_open_conns", 100)
+        v.SetDefault("database.postgres.max_idle_conns", 15)
+        v.SetDefault("database.postgres.conn_max_lifetime", 300)
+        v.SetDefault("database.redis.addr", "localhost:6379")
+        v.SetDefault("database.redis.password", "")
+        v.SetDefault("database.redis.db", 0)
+        v.SetDefault("database.redis.pool_size", 30)
+        v.SetDefault("jwt.secret", "change-me")
+        v.SetDefault("jwt.issuer", "krasis-api")
+        v.SetDefault("jwt.expiration", 604800)
+        v.SetDefault("log.level", "debug")
+        v.SetDefault("log.format", "json")
+        v.SetDefault("storage.minio.endpoint", "localhost:9000")
+        v.SetDefault("storage.minio.access_key", "minioadmin")
+        v.SetDefault("storage.minio.secret_key", "minioadmin")
+        v.SetDefault("storage.minio.bucket", "krasis")
+        v.SetDefault("storage.minio.use_ssl", false)
+        v.SetDefault("storage.ai.qdrant.endpoint", "http://localhost:6333")
+        v.SetDefault("storage.ai.qdrant.api_key", "")
+        v.SetDefault("storage.ai.qdrant.collection", "note_chunks")
+
+        if err := v.ReadInConfig(); err != nil </span><span class="cov8" title="1">{
+                if _, ok := err.(viper.ConfigFileNotFoundError); !ok </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                // Config file not found; use defaults
+        }
+
+        <span class="cov8" title="1">var cfg Config
+        if err := v.Unmarshal(&amp;cfg); err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov8" title="1">return &amp;cfg, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package file
+
+import (
+        "context"
+
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/pkg/response"
+)
+
+// FileServiceInterface defines the interface for file service operations
+type FileServiceInterface interface {
+        GeneratePresignURL(ctx context.Context, userID uuid.UUID, fileName, fileType string, noteID *uuid.UUID) (*PresignResult, error)
+        ConfirmUpload(ctx context.Context, fileID uuid.UUID) error
+        DeleteFile(ctx context.Context, fileID uuid.UUID) error
+        ListByNote(ctx context.Context, noteID uuid.UUID) ([]*File, error)
+}
+
+type Handler struct {
+        service FileServiceInterface
+}
+
+func NewHandler(service FileServiceInterface) *Handler <span class="cov8" title="1">{
+        return &amp;Handler{service: service}
+}</span>
+
+func (h *Handler) GetPresignURL(c *gin.Context) <span class="cov8" title="1">{
+        userID, _ := uuid.Parse(c.GetString("user_id"))
+
+        fileName := c.Query("file_name")
+        fileType := c.Query("file_type")
+        if fileName == "" || fileType == "" </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "file_name 和 file_type 为必填")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var noteID *uuid.UUID
+        if nid := c.Query("note_id"); nid != "" </span><span class="cov8" title="1">{
+                id, err := uuid.Parse(nid)
+                if err == nil </span><span class="cov8" title="1">{
+                        noteID = &amp;id
+                }</span>
+        }
+
+        <span class="cov8" title="1">result, err := h.service.GeneratePresignURL(c, userID, fileName, fileType, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "生成上传 URL 失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, result)</span>
+}
+
+func (h *Handler) ConfirmUpload(c *gin.Context) <span class="cov8" title="1">{
+        var req struct {
+                FileID   string                 `json:"file_id" binding:"required"`
+                NoteID   string                 `json:"note_id"`
+                Metadata map[string]interface{} `json:"metadata"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov8" title="1">fileID, err := uuid.Parse(req.FileID)
+        if err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的 file_id")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if err := h.service.ConfirmUpload(c, fileID); err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 500, response.ErrInternalServerError, "确认上传失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, nil)</span>
+}
+
+func (h *Handler) DeleteFile(c *gin.Context) <span class="cov8" title="1">{
+        fileID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的文件 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if err := h.service.DeleteFile(c, fileID); err != nil </span><span class="cov8" title="1">{
+                if err == ErrFileNotFound </span><span class="cov8" title="1">{
+                        response.Error(c, 404, response.ErrNotFound, "文件不存在")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "删除文件失败")
+                return</span>
+        }
+
+        <span class="cov8" title="1">response.Success(c, nil)</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package file
+
+import (
+        "context"
+        "database/sql"
+        "errors"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/krasis/krasis/pkg/types"
+)
+
+var ErrFileNotFound = errors.New("file not found")
+
+type File struct {
+        ID            uuid.UUID      `json:"id"`
+        NoteID        types.NullUUID  `json:"note_id"`
+        UserID        uuid.UUID      `json:"user_id"`
+        FileName      string         `json:"file_name"`
+        FileType      sql.NullString `json:"file_type"`
+        MimeType      sql.NullString `json:"mime_type"`
+        StoragePath   string         `json:"storage_path"`
+        Bucket        string         `json:"bucket"`
+        SizeBytes     sql.NullInt64  `json:"size_bytes"`
+        Width         sql.NullInt32  `json:"width"`
+        Height        sql.NullInt32  `json:"height"`
+        DurationSec   sql.NullFloat64 `json:"duration_sec"`
+        ThumbnailPath sql.NullString `json:"thumbnail_url"`
+        Metadata      map[string]interface{} `json:"metadata"`
+        Status        int16          `json:"status"`
+        CreatedAt     time.Time      `json:"created_at"`
+}
+
+type PresignResult struct {
+        FileID    string `json:"file_id"`
+        UploadURL string `json:"upload_url"`
+        ExpiresIn int    `json:"expires_in"`
+}
+
+type Repository struct {
+        pool *pgxpool.Pool
+}
+
+func NewRepository(pool *pgxpool.Pool) *Repository <span class="cov0" title="0">{
+        return &amp;Repository{pool: pool}
+}</span>
+
+func (r *Repository) Create(ctx context.Context, file *File) error <span class="cov0" title="0">{
+        return r.pool.QueryRow(ctx, `
+                INSERT INTO files (id, note_id, user_id, file_name, file_type, mime_type,
+                                                   storage_path, bucket, size_bytes, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0)
+                RETURNING created_at
+        `, file.ID, file.NoteID, file.UserID, file.FileName, file.FileType,
+                file.MimeType, file.StoragePath, file.Bucket, file.SizeBytes,
+        ).Scan(&amp;file.CreatedAt)
+}</span>
+
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*File, error) <span class="cov0" title="0">{
+        var f File
+        err := r.pool.QueryRow(ctx, `
+                SELECT id, note_id, user_id, file_name, file_type, mime_type,
+                           storage_path, bucket, size_bytes, width, height, duration_sec,
+                           thumbnail_path, metadata, status, created_at
+                FROM files WHERE id = $1
+        `, id).Scan(
+                &amp;f.ID, &amp;f.NoteID, &amp;f.UserID, &amp;f.FileName, &amp;f.FileType, &amp;f.MimeType,
+                &amp;f.StoragePath, &amp;f.Bucket, &amp;f.SizeBytes, &amp;f.Width, &amp;f.Height,
+                &amp;f.DurationSec, &amp;f.ThumbnailPath, &amp;f.Metadata, &amp;f.Status, &amp;f.CreatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, ErrFileNotFound
+        }</span>
+        <span class="cov0" title="0">return &amp;f, nil</span>
+}
+
+func (r *Repository) ListByNote(ctx context.Context, noteID uuid.UUID) ([]*File, error) <span class="cov0" title="0">{
+        rows, err := r.pool.Query(ctx, `
+                SELECT id, note_id, user_id, file_name, file_type, mime_type,
+                           storage_path, bucket, size_bytes, thumbnail_path, status, created_at
+                FROM files WHERE note_id = $1 AND status = 1
+                ORDER BY created_at
+        `, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var files []*File
+        for rows.Next() </span><span class="cov0" title="0">{
+                var f File
+                if err := rows.Scan(
+                        &amp;f.ID, &amp;f.NoteID, &amp;f.UserID, &amp;f.FileName, &amp;f.FileType, &amp;f.MimeType,
+                        &amp;f.StoragePath, &amp;f.Bucket, &amp;f.SizeBytes, &amp;f.ThumbnailPath, &amp;f.Status, &amp;f.CreatedAt,
+                ); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">files = append(files, &amp;f)</span>
+        }
+        <span class="cov0" title="0">return files, nil</span>
+}
+
+func (r *Repository) UpdateStatus(ctx context.Context, id uuid.UUID, status int16) error <span class="cov0" title="0">{
+        tag, err := r.pool.Exec(ctx,
+                "UPDATE files SET status = $1, processed_at = NOW() WHERE id = $2",
+                status, id,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrFileNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error <span class="cov0" title="0">{
+        tag, err := r.pool.Exec(ctx, "DELETE FROM files WHERE id = $1", id)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrFileNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package file
+
+import (
+        "context"
+        "fmt"
+        "path/filepath"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/minio/minio-go/v7"
+        "github.com/minio/minio-go/v7/pkg/credentials"
+        "github.com/krasis/krasis/pkg/types"
+)
+
+type Service struct {
+        repo     *Repository
+        minio    *minio.Client
+        bucket   string
+        presignTTL time.Duration
+}
+
+func NewService(repo *Repository, minioClient *minio.Client, bucket string, presignTTL time.Duration) *Service <span class="cov0" title="0">{
+        return &amp;Service{
+                repo:     repo,
+                minio:    minioClient,
+                bucket:   bucket,
+                presignTTL: presignTTL,
+        }
+}</span>
+
+func NewMinioClient(endpoint, accessKey, secretKey string, useSSL bool) (*minio.Client, error) <span class="cov0" title="0">{
+        client, err := minio.New(endpoint, &amp;minio.Options{
+                Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+                Secure: useSSL,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("init minio: %w", err)
+        }</span>
+        <span class="cov0" title="0">return client, nil</span>
+}
+
+func (s *Service) GeneratePresignURL(ctx context.Context, userID uuid.UUID, fileName, fileType string, noteID *uuid.UUID) (*PresignResult, error) <span class="cov0" title="0">{
+        fileID := uuid.New().String()
+        ext := filepath.Ext(fileName)
+        objectKey := fmt.Sprintf("uploads/%s/%s%s", fileID, fileID, ext)
+
+        url, err := s.minio.PresignedPutObject(ctx, s.bucket, objectKey, s.presignTTL)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("presign: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">var noteIDVal types.NullUUID
+        if noteID != nil </span><span class="cov0" title="0">{
+                noteIDVal = types.NullUUID{UUID: *noteID, Valid: true}
+        }</span>
+
+        <span class="cov0" title="0">file := &amp;File{
+                ID:          uuid.MustParse(fileID),
+                NoteID:      noteIDVal,
+                UserID:      userID,
+                FileName:    fileName,
+                StoragePath: objectKey,
+                Bucket:      s.bucket,
+        }
+
+        if err := s.repo.Create(ctx, file); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("create file record: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;PresignResult{
+                FileID:    fileID,
+                UploadURL: url.String(),
+                ExpiresIn: int(s.presignTTL.Seconds()),
+        }, nil</span>
+}
+
+func (s *Service) ConfirmUpload(ctx context.Context, fileID uuid.UUID) error <span class="cov0" title="0">{
+        return s.repo.UpdateStatus(ctx, fileID, 1)
+}</span>
+
+func (s *Service) DeleteFile(ctx context.Context, fileID uuid.UUID) error <span class="cov0" title="0">{
+        f, err := s.repo.GetByID(ctx, fileID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Delete from MinIO
+        <span class="cov0" title="0">s.minio.RemoveObject(ctx, s.bucket, f.StoragePath, minio.RemoveObjectOptions{})
+
+        return s.repo.Delete(ctx, fileID)</span>
+}
+
+func (s *Service) ListByNote(ctx context.Context, noteID uuid.UUID) ([]*File, error) <span class="cov0" title="0">{
+        return s.repo.ListByNote(ctx, noteID)
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package folder
+
+import (
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/pkg/response"
+)
+
+type Handler struct {
+        service *Service
+}
+
+func NewHandler(service *Service) *Handler <span class="cov8" title="1">{
+        return &amp;Handler{service: service}
+}</span>
+
+func (h *Handler) ListFolders(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+
+        folders, err := h.service.List(c, ownerID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取文件夹列表失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, gin.H{"items": folders})</span>
+}
+
+func (h *Handler) CreateFolder(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+
+        var req struct {
+                Name     string  `json:"name" binding:"required"`
+                ParentID *string `json:"parent_id"`
+                Color    string  `json:"color"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var parentID *uuid.UUID
+        if req.ParentID != nil </span><span class="cov8" title="1">{
+                id, err := uuid.Parse(*req.ParentID)
+                if err != nil </span><span class="cov8" title="1">{
+                        response.Error(c, 400, response.ErrBadRequest, "无效的父文件夹 ID")
+                        return
+                }</span>
+                <span class="cov0" title="0">parentID = &amp;id</span>
+        }
+
+        <span class="cov8" title="1">folder, err := h.service.Create(c, ownerID, req.Name, parentID, req.Color)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "创建文件夹失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, folder)</span>
+}
+
+func (h *Handler) UpdateFolder(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        id, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的文件夹 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var req struct {
+                Name      string  `json:"name"`
+                ParentID  *string `json:"parent_id"`
+                Color     string  `json:"color"`
+                SortOrder int     `json:"sort_order"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var parentID *uuid.UUID
+        if req.ParentID != nil </span><span class="cov0" title="0">{
+                uid, err := uuid.Parse(*req.ParentID)
+                if err != nil </span><span class="cov0" title="0">{
+                        response.Error(c, 400, response.ErrBadRequest, "无效的父文件夹 ID")
+                        return
+                }</span>
+                <span class="cov0" title="0">parentID = &amp;uid</span>
+        }
+
+        <span class="cov8" title="1">if err := h.service.Update(c, ownerID, id, req.Name, parentID, req.Color, req.SortOrder); err != nil </span><span class="cov8" title="1">{
+                if err == ErrFolderNotFound || err == ErrPermissionDenied </span><span class="cov8" title="1">{
+                        response.Error(c, 404, response.ErrNotFound, "文件夹不存在")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "更新文件夹失败")
+                return</span>
+        }
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+
+func (h *Handler) DeleteFolder(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        id, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的文件夹 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if err := h.service.Delete(c, ownerID, id); err != nil </span><span class="cov8" title="1">{
+                if err == ErrFolderNotFound </span><span class="cov8" title="1">{
+                        response.Error(c, 404, response.ErrNotFound, "文件夹不存在")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "删除文件夹失败")
+                return</span>
+        }
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package folder
+
+import (
+        "context"
+        "database/sql"
+        "errors"
+        "fmt"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/krasis/krasis/pkg/types"
+)
+
+var (
+        ErrFolderNotFound     = errors.New("folder not found")
+        ErrPermissionDenied   = errors.New("permission denied")
+)
+
+type Folder struct {
+        ID        uuid.UUID     `json:"id"`
+        Name      string        `json:"name"`
+        ParentID  types.NullUUID `json:"parent_id"`
+        OwnerID   uuid.UUID     `json:"owner_id"`
+        Color     sql.NullString `json:"color"`
+        SortOrder int           `json:"sort_order"`
+        CreatedAt time.Time     `json:"created_at"`
+        UpdatedAt types.NullTime `json:"updated_at"`
+}
+
+type Repository struct {
+        pool *pgxpool.Pool
+}
+
+func NewRepository(pool *pgxpool.Pool) *Repository <span class="cov0" title="0">{
+        return &amp;Repository{pool: pool}
+}</span>
+
+func (r *Repository) Create(ctx context.Context, ownerID uuid.UUID, name string, parentID *uuid.UUID, color string) (*Folder, error) <span class="cov0" title="0">{
+        var f Folder
+        var parentIDVal interface{}
+        if parentID != nil </span><span class="cov0" title="0">{
+                parentIDVal = parentID
+        }</span>
+
+        <span class="cov0" title="0">err := r.pool.QueryRow(ctx, `
+                INSERT INTO folders (owner_id, name, parent_id, color)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id, name, parent_id, owner_id, color, sort_order, created_at, updated_at
+        `, ownerID, name, parentIDVal, color).Scan(
+                &amp;f.ID, &amp;f.Name, &amp;f.ParentID, &amp;f.OwnerID, &amp;f.Color,
+                &amp;f.SortOrder, &amp;f.CreatedAt, &amp;f.UpdatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("create folder: %w", err)
+        }</span>
+        <span class="cov0" title="0">return &amp;f, nil</span>
+}
+
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Folder, error) <span class="cov0" title="0">{
+        var f Folder
+        err := r.pool.QueryRow(ctx, `
+                SELECT id, name, parent_id, owner_id, color, sort_order, created_at, updated_at
+                FROM folders WHERE id = $1
+        `, id).Scan(
+                &amp;f.ID, &amp;f.Name, &amp;f.ParentID, &amp;f.OwnerID, &amp;f.Color,
+                &amp;f.SortOrder, &amp;f.CreatedAt, &amp;f.UpdatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, ErrFolderNotFound
+        }</span>
+        <span class="cov0" title="0">return &amp;f, nil</span>
+}
+
+func (r *Repository) ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]*Folder, error) <span class="cov0" title="0">{
+        rows, err := r.pool.Query(ctx, `
+                SELECT id, name, parent_id, owner_id, color, sort_order, created_at, updated_at
+                FROM folders WHERE owner_id = $1
+                ORDER BY sort_order, created_at
+        `, ownerID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var folders []*Folder
+        for rows.Next() </span><span class="cov0" title="0">{
+                var f Folder
+                if err := rows.Scan(
+                        &amp;f.ID, &amp;f.Name, &amp;f.ParentID, &amp;f.OwnerID, &amp;f.Color,
+                        &amp;f.SortOrder, &amp;f.CreatedAt, &amp;f.UpdatedAt,
+                ); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">folders = append(folders, &amp;f)</span>
+        }
+        <span class="cov0" title="0">return folders, nil</span>
+}
+
+func (r *Repository) Update(ctx context.Context, id, ownerID uuid.UUID, name string, parentID *uuid.UUID, color string, sortOrder int) error <span class="cov0" title="0">{
+        var parentIDVal interface{}
+        if parentID != nil </span><span class="cov0" title="0">{
+                parentIDVal = parentID
+        }</span>
+
+        <span class="cov0" title="0">tag, err := r.pool.Exec(ctx, `
+                UPDATE folders SET name = $1, parent_id = $2, color = $3, sort_order = $4, updated_at = NOW()
+                WHERE id = $5 AND owner_id = $6
+        `, name, parentIDVal, color, sortOrder, id, ownerID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrFolderNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *Repository) Delete(ctx context.Context, id, ownerID uuid.UUID) error <span class="cov0" title="0">{
+        tag, err := r.pool.Exec(ctx,
+                "DELETE FROM folders WHERE id = $1 AND owner_id = $2",
+                id, ownerID,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrFolderNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package folder
+
+import (
+        "context"
+
+        "github.com/google/uuid"
+)
+
+// RepositoryInterface abstracts the database layer for testing.
+type RepositoryInterface interface {
+        Create(ctx context.Context, ownerID uuid.UUID, name string, parentID *uuid.UUID, color string) (*Folder, error)
+        GetByID(ctx context.Context, id uuid.UUID) (*Folder, error)
+        ListByOwner(ctx context.Context, ownerID uuid.UUID) ([]*Folder, error)
+        Update(ctx context.Context, id, ownerID uuid.UUID, name string, parentID *uuid.UUID, color string, sortOrder int) error
+        Delete(ctx context.Context, id, ownerID uuid.UUID) error
+}
+
+type Service struct {
+        repo RepositoryInterface
+}
+
+func NewService(repo RepositoryInterface) *Service <span class="cov8" title="1">{
+        return &amp;Service{repo: repo}
+}</span>
+
+func (s *Service) Create(ctx context.Context, ownerID uuid.UUID, name string, parentID *uuid.UUID, color string) (*Folder, error) <span class="cov8" title="1">{
+        return s.repo.Create(ctx, ownerID, name, parentID, color)
+}</span>
+
+func (s *Service) List(ctx context.Context, ownerID uuid.UUID) ([]*Folder, error) <span class="cov8" title="1">{
+        return s.repo.ListByOwner(ctx, ownerID)
+}</span>
+
+func (s *Service) Update(ctx context.Context, ownerID uuid.UUID, id uuid.UUID, name string, parentID *uuid.UUID, color string, sortOrder int) error <span class="cov8" title="1">{
+        return s.repo.Update(ctx, id, ownerID, name, parentID, color, sortOrder)
+}</span>
+
+func (s *Service) Delete(ctx context.Context, ownerID, id uuid.UUID) error <span class="cov8" title="1">{
+        return s.repo.Delete(ctx, id, ownerID)
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package group
+
+import (
+        "context"
+        "database/sql"
+        "encoding/json"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Group struct {
+        ID          uuid.UUID  `json:"id"`
+        Name        string     `json:"name"`
+        Description string     `json:"description"`
+        IsDefault   bool       `json:"is_default"`
+        UserCount   int64      `json:"user_count"`
+        CreatedAt   time.Time  `json:"created_at"`
+        UpdatedAt   *time.Time `json:"updated_at"`
+}
+
+type GroupFeature struct {
+        ID           uuid.UUID       `json:"id"`
+        GroupID      uuid.UUID       `json:"group_id"`
+        FeatureKey   string          `json:"feature_key"`
+        FeatureValue json.RawMessage `json:"feature_value"`
+        UpdatedAt    time.Time       `json:"updated_at"`
+}
+
+type Repository struct {
+        pool *pgxpool.Pool
+}
+
+func NewRepository(pool *pgxpool.Pool) *Repository <span class="cov0" title="0">{
+        return &amp;Repository{pool: pool}
+}</span>
+
+func (r *Repository) List(ctx context.Context) ([]Group, error) <span class="cov0" title="0">{
+        rows, err := r.pool.Query(ctx, `
+                SELECT g.id, g.name, g.description, g.is_default, g.created_at, g.updated_at,
+                           COUNT(u.id) AS user_count
+                FROM groups g
+                LEFT JOIN users u ON u.group_id = g.id
+                GROUP BY g.id
+                ORDER BY g.created_at
+        `)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var groups []Group
+        for rows.Next() </span><span class="cov0" title="0">{
+                var g Group
+                var updatedAt sql.NullTime
+                if err := rows.Scan(&amp;g.ID, &amp;g.Name, &amp;g.Description, &amp;g.IsDefault, &amp;g.CreatedAt, &amp;updatedAt, &amp;g.UserCount); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">if updatedAt.Valid </span><span class="cov0" title="0">{
+                        g.UpdatedAt = &amp;updatedAt.Time
+                }</span>
+                <span class="cov0" title="0">groups = append(groups, g)</span>
+        }
+        <span class="cov0" title="0">if groups == nil </span><span class="cov0" title="0">{
+                groups = []Group{}
+        }</span>
+        <span class="cov0" title="0">return groups, nil</span>
+}
+
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Group, error) <span class="cov0" title="0">{
+        var g Group
+        var updatedAt sql.NullTime
+        var userCount int64
+        err := r.pool.QueryRow(ctx, `
+                SELECT g.id, g.name, g.description, g.is_default, g.created_at, g.updated_at,
+                           COUNT(u.id) AS user_count
+                FROM groups g
+                LEFT JOIN users u ON u.group_id = g.id
+                WHERE g.id = $1
+                GROUP BY g.id
+        `, id).Scan(&amp;g.ID, &amp;g.Name, &amp;g.Description, &amp;g.IsDefault, &amp;g.CreatedAt, &amp;updatedAt, &amp;userCount)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">g.UserCount = userCount
+        if updatedAt.Valid </span><span class="cov0" title="0">{
+                g.UpdatedAt = &amp;updatedAt.Time
+        }</span>
+        <span class="cov0" title="0">return &amp;g, nil</span>
+}
+
+func (r *Repository) Create(ctx context.Context, name, description string) (*Group, error) <span class="cov0" title="0">{
+        g := &amp;Group{ID: uuid.New(), Name: name, Description: description}
+        err := r.pool.QueryRow(ctx,
+                "INSERT INTO groups (id, name, description) VALUES ($1, $2, $3) RETURNING created_at",
+                g.ID, g.Name, g.Description).Scan(&amp;g.CreatedAt)
+        return g, err
+}</span>
+
+func (r *Repository) Update(ctx context.Context, id uuid.UUID, name, description string) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx,
+                "UPDATE groups SET name = $1, description = $2, updated_at = NOW() WHERE id = $3",
+                name, description, id)
+        return err
+}</span>
+
+func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx, "DELETE FROM groups WHERE id = $1 AND is_default = false", id)
+        return err
+}</span>
+
+func (r *Repository) GetFeatures(ctx context.Context, groupID uuid.UUID) ([]GroupFeature, error) <span class="cov0" title="0">{
+        rows, err := r.pool.Query(ctx,
+                "SELECT id, group_id, feature_key, feature_value, updated_at FROM group_features WHERE group_id = $1", groupID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var features []GroupFeature
+        for rows.Next() </span><span class="cov0" title="0">{
+                var f GroupFeature
+                if err := rows.Scan(&amp;f.ID, &amp;f.GroupID, &amp;f.FeatureKey, &amp;f.FeatureValue, &amp;f.UpdatedAt); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">features = append(features, f)</span>
+        }
+        <span class="cov0" title="0">if features == nil </span><span class="cov0" title="0">{
+                features = []GroupFeature{}
+        }</span>
+        <span class="cov0" title="0">return features, nil</span>
+}
+
+func (r *Repository) UpdateFeatures(ctx context.Context, groupID uuid.UUID, features map[string]json.RawMessage) error <span class="cov0" title="0">{
+        tx, err := r.pool.Begin(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">defer tx.Rollback(ctx)
+
+        for key, value := range features </span><span class="cov0" title="0">{
+                _, err := tx.Exec(ctx, `
+                        INSERT INTO group_features (group_id, feature_key, feature_value)
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (group_id, feature_key) DO UPDATE SET feature_value = $3, updated_at = NOW()
+                `, groupID, key, value)
+                if err != nil </span><span class="cov0" title="0">{
+                        return err
+                }</span>
+        }
+        <span class="cov0" title="0">return tx.Commit(ctx)</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package note
+
+import (
+        "strconv"
+
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/pkg/response"
+        "go.uber.org/zap"
+)
+
+type Handler struct {
+        service *NoteService
+        logger  *zap.Logger
+}
+
+func NewHandler(service *NoteService, logger *zap.Logger) *Handler <span class="cov8" title="1">{
+        return &amp;Handler{service: service, logger: logger}
+}</span>
+
+func (h *Handler) CreateNote(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+
+        var req struct {
+                Title    string  `json:"title"`
+                Content  string  `json:"content"`
+                FolderID *string `json:"folder_id"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var folderID *uuid.UUID
+        if req.FolderID != nil </span><span class="cov0" title="0">{
+                id, err := uuid.Parse(*req.FolderID)
+                if err != nil </span><span class="cov0" title="0">{
+                        response.Error(c, 400, response.ErrBadRequest, "无效的文件夹 ID")
+                        return
+                }</span>
+                <span class="cov0" title="0">folderID = &amp;id</span>
+        }
+
+        <span class="cov8" title="1">note, err := h.service.Create(c, ownerID, req.Title, req.Content, folderID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "创建笔记失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, gin.H{
+                "id":         note.ID,
+                "title":      note.Title,
+                "version":    note.Version,
+                "created_at": note.CreatedAt,
+        })</span>
+}
+
+func (h *Handler) GetNote(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">note, err := h.service.GetByID(c, ownerID, noteID)
+        if err == ErrPermissionDenied || err == ErrNoteNotFound || err == ErrNoteDeleted </span><span class="cov8" title="1">{
+                response.Error(c, 404, response.ErrNotFound, "笔记不存在")
+                return
+        }</span>
+        <span class="cov0" title="0">if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取笔记失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">data := gin.H{
+                "id":         note.ID,
+                "title":      note.Title,
+                "content":    note.Content,
+                "owner_id":   note.OwnerID,
+                "folder_id":  note.FolderID,
+                "version":    note.Version,
+                "is_public":  note.IsPublic,
+                "created_at": note.CreatedAt,
+                "updated_at": note.UpdatedAt,
+        }
+
+        if note.ContentHTML.Valid </span><span class="cov0" title="0">{
+                data["content_html"] = note.ContentHTML.String
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, data)</span>
+}
+
+func (h *Handler) ListNotes(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+
+        page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+        size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+        sort := c.DefaultQuery("sort", "updated_at")
+        order := c.DefaultQuery("order", "desc")
+
+        var folderID *uuid.UUID
+        if fid := c.Query("folder_id"); fid != "" </span><span class="cov0" title="0">{
+                id, err := uuid.Parse(fid)
+                if err == nil </span><span class="cov0" title="0">{
+                        folderID = &amp;id
+                }</span>
+        }
+
+        <span class="cov8" title="1">notes, total, err := h.service.List(c, ownerID, folderID, page, size, sort, order)
+        if err != nil </span><span class="cov0" title="0">{
+                h.logger.Error("ListNotes failed", zap.Error(err), zap.String("owner_id", ownerID.String()))
+                response.Error(c, 500, response.ErrInternalServerError, "获取笔记列表失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">items := make([]gin.H, 0, len(notes))
+        for _, n := range notes </span><span class="cov8" title="1">{
+                item := gin.H{
+                        "id":             n.ID,
+                        "title":          n.Title,
+                        "content_preview": truncate(n.Content, 200),
+                        "owner_id":       n.OwnerID,
+                        "folder_id":      n.FolderID,
+                        "version":        n.Version,
+                        "is_public":      n.IsPublic,
+                        "created_at":     n.CreatedAt,
+                        "updated_at":     n.UpdatedAt,
+                }
+                items = append(items, item)
+        }</span>
+
+        <span class="cov8" title="1">response.SuccessPaginated(c, items, total, page, size)</span>
+}
+
+func (h *Handler) UpdateNote(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">versionStr := c.GetHeader("If-Match")
+        var version int
+        if versionStr != "" </span><span class="cov8" title="1">{
+                version, _ = strconv.Atoi(versionStr)
+        }</span>
+
+        <span class="cov8" title="1">var req struct {
+                Title   string `json:"title"`
+                Content string `json:"content"`
+                Version int    `json:"version"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        // Use If-Match header version if provided, otherwise body version
+        // If-Match header takes precedence (HTTP standard)
+        <span class="cov8" title="1">if versionStr != "" &amp;&amp; version &gt; 0 </span>{<span class="cov8" title="1">
+                // If-Match header is authoritative
+        }</span> else<span class="cov0" title="0"> {
+                // Fall back to body version
+                version = req.Version
+        }</span>
+
+        <span class="cov8" title="1">note, err := h.service.Update(c, ownerID, noteID, req.Title, req.Content, version)
+        if err != nil </span><span class="cov8" title="1">{
+                if _, ok := err.(*ConflictError); ok </span><span class="cov8" title="1">{
+                        response.Error(c, 409, response.ErrConflict, "版本冲突")
+                        return
+                }</span>
+                <span class="cov0" title="0">if err == ErrPermissionDenied || err == ErrNoteNotFound || err == ErrNoteDeleted </span><span class="cov0" title="0">{
+                        response.Error(c, 404, response.ErrNotFound, "笔记不存在")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "更新笔记失败")
+                return</span>
+        }
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                "id":         note.ID,
+                "title":      note.Title,
+                "version":    note.Version,
+                "updated_at": note.UpdatedAt,
+        })</span>
+}
+
+func (h *Handler) DeleteNote(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">permanent := c.DefaultQuery("permanent", "false") == "true"
+
+        if err := h.service.Delete(c, ownerID, noteID, permanent); err != nil </span><span class="cov8" title="1">{
+                if err == ErrPermissionDenied || err == ErrNoteNotFound </span><span class="cov8" title="1">{
+                        response.Error(c, 404, response.ErrNotFound, "笔记不存在")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "删除笔记失败")
+                return</span>
+        }
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+
+func (h *Handler) GetVersions(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">versions, err := h.service.GetVersions(c, ownerID, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                if err == ErrPermissionDenied || err == ErrNoteNotFound </span><span class="cov0" title="0">{
+                        response.Error(c, 404, response.ErrNotFound, "笔记不存在")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "获取版本失败")
+                return</span>
+        }
+
+        <span class="cov8" title="1">items := make([]gin.H, 0, len(versions))
+        for _, v := range versions </span><span class="cov8" title="1">{
+                item := gin.H{
+                        "id":         v.ID,
+                        "version":    v.Version,
+                        "created_at": v.CreatedAt,
+                }
+                if v.Title.Valid </span><span class="cov0" title="0">{
+                        item["title"] = v.Title.String
+                }</span>
+                <span class="cov8" title="1">if v.ChangeSummary.Valid </span><span class="cov0" title="0">{
+                        item["change_summary"] = v.ChangeSummary.String
+                }</span>
+                <span class="cov8" title="1">items = append(items, item)</span>
+        }
+
+        <span class="cov8" title="1">response.Success(c, gin.H{"items": items})</span>
+}
+
+func (h *Handler) RestoreVersion(c *gin.Context) <span class="cov8" title="1">{
+        ownerID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov8" title="1">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">version, err := strconv.Atoi(c.Param("version"))
+        if err != nil || version &lt; 1 </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的版本号")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.service.RestoreVersion(c, ownerID, noteID, version); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "恢复版本失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+
+func truncate(s string, max int) string <span class="cov8" title="1">{
+        if len(s) &lt;= max </span><span class="cov8" title="1">{
+                return s
+        }</span>
+        <span class="cov8" title="1">return s[:max] + "..."</span>
+}
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package note
+
+import (
+        "context"
+        "database/sql"
+        "errors"
+        "fmt"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/krasis/krasis/pkg/types"
+        "go.uber.org/zap"
+)
+
+var (
+        ErrNoteNotFound     = errors.New("note not found")
+        ErrNoteDeleted      = errors.New("note has been deleted")
+        ErrVersionConflict  = errors.New("version conflict")
+        ErrPermissionDenied = errors.New("permission denied")
+)
+
+type Note struct {
+        ID          uuid.UUID     `json:"id"`
+        Title       string        `json:"title"`
+        Content     string        `json:"content"`
+        ContentHTML sql.NullString `json:"content_html,omitempty"`
+        OwnerID     uuid.UUID     `json:"owner_id"`
+        FolderID    types.NullUUID `json:"folder_id"`
+        Version     int           `json:"version"`
+        IsPublic    bool          `json:"is_public"`
+        IsDeleted   bool          `json:"-"`
+        CreatedAt   time.Time     `json:"created_at"`
+        UpdatedAt   types.NullTime `json:"updated_at"`
+}
+
+type NoteVersion struct {
+        ID            uuid.UUID     `json:"id"`
+        NoteID        uuid.UUID     `json:"note_id"`
+        Title         sql.NullString `json:"title"`
+        Content       sql.NullString `json:"content,omitempty"`
+        ContentHTML   sql.NullString `json:"content_html,omitempty"`
+        Version       int           `json:"version"`
+        ChangedBy     types.NullUUID `json:"changed_by,omitempty"`
+        ChangeSummary sql.NullString `json:"change_summary,omitempty"`
+        CreatedAt     time.Time     `json:"created_at"`
+}
+
+type NoteRepository struct {
+        pool   *pgxpool.Pool
+        logger *zap.Logger
+}
+
+func NewNoteRepository(pool *pgxpool.Pool, logger *zap.Logger) *NoteRepository <span class="cov0" title="0">{
+        return &amp;NoteRepository{pool: pool, logger: logger}
+}</span>
+
+func (r *NoteRepository) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error) <span class="cov0" title="0">{
+        var note Note
+        query := `
+                INSERT INTO notes (owner_id, title, content, folder_id, version)
+                VALUES ($1, $2, $3, $4, 1)
+                RETURNING id, title, content, owner_id, folder_id, version, created_at, updated_at
+        `
+
+        var fid sql.NullString
+        if folderID != nil </span><span class="cov0" title="0">{
+                fid = sql.NullString{String: folderID.String(), Valid: true}
+        }</span>
+
+        <span class="cov0" title="0">err := r.pool.QueryRow(ctx, query, ownerID, title, content, fid).Scan(
+                &amp;note.ID, &amp;note.Title, &amp;note.Content, &amp;note.OwnerID, &amp;note.FolderID,
+                &amp;note.Version, &amp;note.CreatedAt, &amp;note.UpdatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("create note: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return &amp;note, nil</span>
+}
+
+func (r *NoteRepository) GetByID(ctx context.Context, id uuid.UUID) (*Note, error) <span class="cov0" title="0">{
+        var note Note
+        err := r.pool.QueryRow(ctx,
+                `SELECT id, title, content, content_html, owner_id, folder_id, version,
+                                is_public, is_deleted, created_at, updated_at
+                 FROM notes WHERE id = $1`,
+                id,
+        ).Scan(
+                &amp;note.ID, &amp;note.Title, &amp;note.Content, &amp;note.ContentHTML, &amp;note.OwnerID,
+                &amp;note.FolderID, &amp;note.Version, &amp;note.IsPublic, &amp;note.IsDeleted,
+                &amp;note.CreatedAt, &amp;note.UpdatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                if err.Error() == "no rows in result set" </span><span class="cov0" title="0">{
+                        return nil, ErrNoteNotFound
+                }</span>
+                <span class="cov0" title="0">return nil, err</span>
+        }
+        <span class="cov0" title="0">return &amp;note, nil</span>
+}
+
+func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error) <span class="cov0" title="0">{
+        where := "WHERE owner_id = $1 AND is_deleted = false"
+        args := []interface{}{ownerID}
+        argIdx := 2
+
+        if folderID != nil </span><span class="cov0" title="0">{
+                where += fmt.Sprintf(" AND folder_id = $%d", argIdx)
+                args = append(args, folderID)
+                argIdx++
+        }</span>
+
+        // Count
+        <span class="cov0" title="0">var total int64
+        err := r.pool.QueryRow(ctx,
+                "SELECT COUNT(*) FROM notes "+where, args...,
+        ).Scan(&amp;total)
+        if err != nil </span><span class="cov0" title="0">{
+                r.logger.Error("ListByOwner count failed",
+                        zap.Error(err),
+                        zap.String("owner_id", ownerID.String()),
+                )
+                return nil, 0, err
+        }</span>
+
+        // Sort validation — whitelist to prevent SQL injection
+        <span class="cov0" title="0">allowedSort := map[string]bool{"title": true, "created_at": true, "updated_at": true}
+        if !allowedSort[sort] </span><span class="cov0" title="0">{
+                sort = "updated_at"
+        }</span>
+        <span class="cov0" title="0">if order != "asc" &amp;&amp; order != "desc" </span><span class="cov0" title="0">{
+                order = "desc"
+        }</span>
+
+        <span class="cov0" title="0">offset := (page - 1) * size
+        args = append(args, size, offset)
+        query := fmt.Sprintf(`
+                SELECT id, title, content, owner_id, folder_id, version,
+                           is_public, created_at, updated_at
+                FROM notes %s
+                ORDER BY %s %s
+                LIMIT $%d OFFSET $%d
+        `, where, sort, order, argIdx, argIdx+1)
+
+        rows, err := r.pool.Query(ctx, query, args...)
+        if err != nil </span><span class="cov0" title="0">{
+                r.logger.Error("ListByOwner query failed",
+                        zap.String("query", query),
+                        zap.Error(err),
+                        zap.String("owner_id", ownerID.String()),
+                        zap.Int("page", page),
+                        zap.Int("size", size),
+                )
+                return nil, 0, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        notes := make([]*Note, 0, size)
+        for rows.Next() </span><span class="cov0" title="0">{
+                var n Note
+                var content sql.NullString
+                if err := rows.Scan(
+                        &amp;n.ID, &amp;n.Title, &amp;content, &amp;n.OwnerID, &amp;n.FolderID,
+                        &amp;n.Version, &amp;n.IsPublic, &amp;n.CreatedAt, &amp;n.UpdatedAt,
+                ); err != nil </span><span class="cov0" title="0">{
+                        return nil, 0, err
+                }</span>
+                <span class="cov0" title="0">if content.Valid </span><span class="cov0" title="0">{
+                        n.Content = content.String
+                }</span>
+                <span class="cov0" title="0">notes = append(notes, &amp;n)</span>
+        }
+
+        <span class="cov0" title="0">return notes, total, nil</span>
+}
+
+func (r *NoteRepository) UpdateWithOptimisticLock(ctx context.Context, id uuid.UUID, title, content string, currentVersion int) (*Note, error) <span class="cov0" title="0">{
+        var note Note
+        err := r.pool.QueryRow(ctx, `
+                UPDATE notes
+                SET title = $1, content = $2, version = version + 1, updated_at = NOW()
+                WHERE id = $3 AND version = $4 AND is_deleted = false
+                RETURNING id, title, content, owner_id, folder_id, version, created_at, updated_at
+        `, title, content, id, currentVersion).Scan(
+                &amp;note.ID, &amp;note.Title, &amp;note.Content, &amp;note.OwnerID, &amp;note.FolderID,
+                &amp;note.Version, &amp;note.CreatedAt, &amp;note.UpdatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                if err.Error() == "no rows in result set" </span><span class="cov0" title="0">{
+                        // Check if note exists but version mismatch
+                        existing, _ := r.GetByID(ctx, id)
+                        if existing != nil </span><span class="cov0" title="0">{
+                                return nil, ErrVersionConflict
+                        }</span>
+                        <span class="cov0" title="0">return nil, ErrNoteNotFound</span>
+                }
+                <span class="cov0" title="0">return nil, err</span>
+        }
+        <span class="cov0" title="0">return &amp;note, nil</span>
+}
+
+func (r *NoteRepository) SoftDelete(ctx context.Context, id uuid.UUID) error <span class="cov0" title="0">{
+        tag, err := r.pool.Exec(ctx,
+                "UPDATE notes SET is_deleted = true, deleted_at = NOW() WHERE id = $1 AND is_deleted = false",
+                id,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrNoteNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *NoteRepository) PermanentDelete(ctx context.Context, id uuid.UUID) error <span class="cov0" title="0">{
+        tag, err := r.pool.Exec(ctx, "DELETE FROM notes WHERE id = $1", id)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrNoteNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *NoteRepository) SaveVersion(ctx context.Context, noteID, changedBy uuid.UUID, title, content string, version int, summary string) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx, `
+                INSERT INTO note_versions (note_id, title, content, version, changed_by, change_summary)
+                VALUES ($1, $2, $3, $4, $5, $6)
+        `, noteID, title, content, version, changedBy, summary)
+        return err
+}</span>
+
+func (r *NoteRepository) GetVersions(ctx context.Context, noteID uuid.UUID) ([]*NoteVersion, error) <span class="cov0" title="0">{
+        rows, err := r.pool.Query(ctx, `
+                SELECT id, note_id, title, content, content_html, version, changed_by,
+                           change_summary, created_at
+                FROM note_versions WHERE note_id = $1
+                ORDER BY version DESC
+        `, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var versions []*NoteVersion
+        for rows.Next() </span><span class="cov0" title="0">{
+                var v NoteVersion
+                if err := rows.Scan(
+                        &amp;v.ID, &amp;v.NoteID, &amp;v.Title, &amp;v.Content, &amp;v.ContentHTML,
+                        &amp;v.Version, &amp;v.ChangedBy, &amp;v.ChangeSummary, &amp;v.CreatedAt,
+                ); err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">versions = append(versions, &amp;v)</span>
+        }
+        <span class="cov0" title="0">return versions, nil</span>
+}
+
+func (r *NoteRepository) GetVersion(ctx context.Context, noteID uuid.UUID, version int) (*NoteVersion, error) <span class="cov0" title="0">{
+        var v NoteVersion
+        err := r.pool.QueryRow(ctx, `
+                SELECT id, note_id, title, content, content_html, version, changed_by,
+                           change_summary, created_at
+                FROM note_versions WHERE note_id = $1 AND version = $2
+        `, noteID, version).Scan(
+                &amp;v.ID, &amp;v.NoteID, &amp;v.Title, &amp;v.Content, &amp;v.ContentHTML,
+                &amp;v.Version, &amp;v.ChangedBy, &amp;v.ChangeSummary, &amp;v.CreatedAt,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;v, nil</span>
+}
+
+func (r *NoteRepository) Count(ctx context.Context) (int64, error) <span class="cov0" title="0">{
+        var count int64
+        err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM notes WHERE is_deleted = false").Scan(&amp;count)
+        return count, err
+}</span>
+
+func (r *NoteRepository) CountToday(ctx context.Context, action string) (int64, error) <span class="cov0" title="0">{
+        var count int64
+        query := "SELECT COUNT(*) FROM notes WHERE DATE(created_at) = CURRENT_DATE"
+        if action == "updated" </span><span class="cov0" title="0">{
+                query = "SELECT COUNT(*) FROM notes WHERE DATE(updated_at) = CURRENT_DATE"
+        }</span>
+        <span class="cov0" title="0">err := r.pool.QueryRow(ctx, query).Scan(&amp;count)
+        return count, err</span>
+}
+
+func (r *NoteRepository) TotalStorageUsed(ctx context.Context) (int64, error) <span class="cov0" title="0">{
+        var total int64
+        err := r.pool.QueryRow(ctx, "SELECT COALESCE(SUM(file_size), 0) FROM files").Scan(&amp;total)
+        return total, err
+}</span>
+
+func (r *NoteRepository) RestoreVersion(ctx context.Context, noteID uuid.UUID, version int, title, content string) error <span class="cov0" title="0">{
+        tx, err := r.pool.Begin(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">defer tx.Rollback(ctx)
+
+        var newVersion int
+        err = tx.QueryRow(ctx, `
+                UPDATE notes SET title = $1, content = $2, version = version + 1, updated_at = NOW()
+                WHERE id = $3 AND is_deleted = false
+                RETURNING version
+        `, title, content, noteID).Scan(&amp;newVersion)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">_, err = tx.Exec(ctx, `
+                INSERT INTO note_versions (note_id, title, content, version, change_summary)
+                VALUES ($1, $2, $3, $4, '版本回滚')
+        `, noteID, title, content, newVersion)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">return tx.Commit(ctx)</span>
+}
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package note
+
+import (
+        "context"
+        "fmt"
+        "strings"
+
+        "github.com/google/uuid"
+)
+
+// NoteIndexer is the interface for RAG note indexing (defined here to avoid circular dep)
+type NoteIndexer interface {
+        IndexNote(ctx context.Context, noteID, title, content, userID string) error
+        DeleteNoteIndex(ctx context.Context, noteID string) error
+}
+
+// NoteRepositoryInterface abstracts the database layer for testing.
+type NoteRepositoryInterface interface {
+        Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error)
+        GetByID(ctx context.Context, id uuid.UUID) (*Note, error)
+        ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error)
+        UpdateWithOptimisticLock(ctx context.Context, id uuid.UUID, title, content string, version int) (*Note, error)
+        SoftDelete(ctx context.Context, id uuid.UUID) error
+        PermanentDelete(ctx context.Context, id uuid.UUID) error
+        SaveVersion(ctx context.Context, noteID, changedBy uuid.UUID, title, content string, version int, summary string) error
+        GetVersions(ctx context.Context, noteID uuid.UUID) ([]*NoteVersion, error)
+        GetVersion(ctx context.Context, noteID uuid.UUID, version int) (*NoteVersion, error)
+        RestoreVersion(ctx context.Context, noteID uuid.UUID, version int, title, content string) error
+        Count(ctx context.Context) (int64, error)
+        CountToday(ctx context.Context, action string) (int64, error)
+        TotalStorageUsed(ctx context.Context) (int64, error)
+}
+
+type NoteService struct {
+        repo       NoteRepositoryInterface
+        indexer    NoteIndexer
+}
+
+func NewNoteService(repo NoteRepositoryInterface, indexer NoteIndexer) *NoteService <span class="cov8" title="1">{
+        return &amp;NoteService{repo: repo, indexer: indexer}
+}</span>
+
+func (s *NoteService) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error) <span class="cov8" title="1">{
+        if strings.TrimSpace(title) == "" </span><span class="cov8" title="1">{
+                title = "Untitled"
+        }</span>
+
+        <span class="cov8" title="1">note, err := s.repo.Create(ctx, ownerID, title, content, folderID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        // Save initial version
+        <span class="cov8" title="1">if err := s.repo.SaveVersion(ctx, note.ID, ownerID, note.Title, note.Content, 1, "创建笔记"); err != nil </span><span class="cov0" title="0">{
+                return note, fmt.Errorf("save version: %w", err)
+        }</span>
+
+        // Index for RAG search (async)
+        <span class="cov8" title="1">if s.indexer != nil </span><span class="cov0" title="0">{
+                go s.indexer.IndexNote(context.Background(), note.ID.String(), note.Title, note.Content, ownerID.String())
+        }</span>
+
+        <span class="cov8" title="1">return note, nil</span>
+}
+
+func (s *NoteService) GetByID(ctx context.Context, userID, noteID uuid.UUID) (*Note, error) <span class="cov8" title="1">{
+        note, err := s.repo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if note.OwnerID != userID </span><span class="cov8" title="1">{
+                return nil, ErrPermissionDenied
+        }</span>
+        <span class="cov8" title="1">if note.IsDeleted </span><span class="cov8" title="1">{
+                return nil, ErrNoteDeleted
+        }</span>
+        <span class="cov0" title="0">return note, nil</span>
+}
+
+func (s *NoteService) List(ctx context.Context, userID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error) <span class="cov8" title="1">{
+        if page &lt; 1 </span><span class="cov8" title="1">{
+                page = 1
+        }</span>
+        <span class="cov8" title="1">if size &lt; 1 || size &gt; 100 </span><span class="cov8" title="1">{
+                size = 20
+        }</span>
+        <span class="cov8" title="1">return s.repo.ListByOwner(ctx, userID, folderID, page, size, sort, order)</span>
+}
+
+func (s *NoteService) Update(ctx context.Context, userID, noteID uuid.UUID, title, content string, version int) (*Note, error) <span class="cov8" title="1">{
+        note, err := s.repo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if note.OwnerID != userID </span><span class="cov0" title="0">{
+                return nil, ErrPermissionDenied
+        }</span>
+        <span class="cov8" title="1">if note.IsDeleted </span><span class="cov0" title="0">{
+                return nil, ErrNoteDeleted
+        }</span>
+
+        <span class="cov8" title="1">updatedNote, err := s.repo.UpdateWithOptimisticLock(ctx, noteID, title, content, version)
+        if err != nil </span><span class="cov8" title="1">{
+                if err == ErrVersionConflict </span><span class="cov8" title="1">{
+                        latest, _ := s.repo.GetByID(ctx, noteID)
+                        return nil, &amp;ConflictError{
+                                CurrentVersion: latest.Version,
+                                Note:           latest,
+                        }
+                }</span>
+                <span class="cov0" title="0">return nil, err</span>
+        }
+
+        // Save version history asynchronously
+        <span class="cov0" title="0">go s.repo.SaveVersion(context.Background(), noteID, userID, updatedNote.Title, updatedNote.Content, updatedNote.Version, "内容更新")
+
+        // Re-index for RAG search (async)
+        if s.indexer != nil </span><span class="cov0" title="0">{
+                go s.indexer.IndexNote(context.Background(), noteID.String(), updatedNote.Title, updatedNote.Content, userID.String())
+        }</span>
+
+        <span class="cov0" title="0">return updatedNote, nil</span>
+}
+
+func (s *NoteService) Delete(ctx context.Context, userID, noteID uuid.UUID, permanent bool) error <span class="cov8" title="1">{
+        note, err := s.repo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov8" title="1">if note.OwnerID != userID </span><span class="cov0" title="0">{
+                return ErrPermissionDenied
+        }</span>
+
+        <span class="cov8" title="1">if permanent </span><span class="cov0" title="0">{
+                if s.indexer != nil </span><span class="cov0" title="0">{
+                        go s.indexer.DeleteNoteIndex(context.Background(), noteID.String())
+                }</span>
+                <span class="cov0" title="0">return s.repo.PermanentDelete(ctx, noteID)</span>
+        }
+        <span class="cov8" title="1">if s.indexer != nil </span><span class="cov0" title="0">{
+                go s.indexer.DeleteNoteIndex(context.Background(), noteID.String())
+        }</span>
+        <span class="cov8" title="1">return s.repo.SoftDelete(ctx, noteID)</span>
+}
+
+func (s *NoteService) GetVersions(ctx context.Context, userID, noteID uuid.UUID) ([]*NoteVersion, error) <span class="cov8" title="1">{
+        note, err := s.repo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">if note.OwnerID != userID </span><span class="cov0" title="0">{
+                return nil, ErrPermissionDenied
+        }</span>
+        <span class="cov8" title="1">return s.repo.GetVersions(ctx, noteID)</span>
+}
+
+func (s *NoteService) RestoreVersion(ctx context.Context, userID, noteID uuid.UUID, version int) error <span class="cov0" title="0">{
+        note, err := s.repo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if note.OwnerID != userID </span><span class="cov0" title="0">{
+                return ErrPermissionDenied
+        }</span>
+
+        <span class="cov0" title="0">v, err := s.repo.GetVersion(ctx, noteID, version)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("version not found: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">title := ""
+        if v.Title.Valid </span><span class="cov0" title="0">{
+                title = v.Title.String
+        }</span>
+        <span class="cov0" title="0">content := ""
+        if v.Content.Valid </span><span class="cov0" title="0">{
+                content = v.Content.String
+        }</span>
+
+        <span class="cov0" title="0">if err := s.repo.RestoreVersion(ctx, noteID, version, title, content); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        // Re-index for RAG search (async)
+        <span class="cov0" title="0">if s.indexer != nil </span><span class="cov0" title="0">{
+                go s.indexer.IndexNote(context.Background(), noteID.String(), title, content, userID.String())
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+type ConflictError struct {
+        CurrentVersion int
+        Note           *Note
+}
+
+func (e *ConflictError) Error() string <span class="cov8" title="1">{
+        return "version conflict"
+}</span>
+</pre>
+		
+		<pre class="file" id="file16" style="display: none">package share
+
+import (
+        "database/sql"
+        "encoding/json"
+        "fmt"
+        "strconv"
+        "time"
+
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/internal/auditlog"
+        "github.com/krasis/krasis/pkg/response"
+)
+
+type Handler struct {
+        service   *Service
+        auditRepo *auditlog.Repository
+}
+
+func NewHandler(service *Service, auditRepo *auditlog.Repository) *Handler <span class="cov0" title="0">{
+        return &amp;Handler{service: service, auditRepo: auditRepo}
+}</span>
+
+func (h *Handler) audit(c *gin.Context, action string, targetType string, targetID uuid.NullUUID, changes interface{}) <span class="cov0" title="0">{
+        adminIDStr, _ := c.Get("user_id")
+        if adminIDStr == nil || h.auditRepo == nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">adminID, err := uuid.Parse(adminIDStr.(string))
+        if err != nil </span><span class="cov0" title="0">{
+                return
+        }</span>
+        <span class="cov0" title="0">var changesJSON json.RawMessage
+        if changes != nil </span><span class="cov0" title="0">{
+                changesJSON, _ = json.Marshal(changes)
+        }</span>
+        <span class="cov0" title="0">_ = h.auditRepo.Create(c.Request.Context(), &amp;auditlog.AuditLog{
+                Action:     action,
+                TargetType: sql.NullString{String: targetType, Valid: targetType != ""},
+                TargetID:   targetID,
+                AdminID:    adminID,
+                Changes:    changesJSON,
+                IPAddress:  sql.NullString{String: c.ClientIP(), Valid: true},
+                UserAgent:  sql.NullString{String: c.GetHeader("User-Agent"), Valid: true},
+        })</span>
+}
+
+func (h *Handler) CreateShare(c *gin.Context) <span class="cov0" title="0">{
+        userID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">var req struct {
+                ShareType  string  `json:"share_type"`
+                Permission string  `json:"permission"`
+                Password   string  `json:"password"`
+                ExpiresAt  *string `json:"expires_at"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov0" title="0">createReq := &amp;CreateShareRequest{
+                ShareType:  req.ShareType,
+                Permission: req.Permission,
+                Password:   req.Password,
+        }
+        if req.ExpiresAt != nil </span><span class="cov0" title="0">{
+                t, err := time.Parse(time.RFC3339, *req.ExpiresAt)
+                if err != nil </span><span class="cov0" title="0">{
+                        response.Error(c, 400, response.ErrBadRequest, "无效的过期时间")
+                        return
+                }</span>
+                <span class="cov0" title="0">createReq.ExpiresAt = &amp;t</span>
+        }
+
+        <span class="cov0" title="0">share, err := h.service.CreateShare(c, userID, noteID, createReq)
+        if err != nil </span><span class="cov0" title="0">{
+                if err == ErrShareExists </span><span class="cov0" title="0">{
+                        response.Error(c, 409, response.ErrConflict, "该笔记已有分享链接")
+                        return
+                }</span>
+                <span class="cov0" title="0">response.Error(c, 500, response.ErrInternalServerError, "创建分享失败")
+                return</span>
+        }
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                "share_token": share.ShareToken,
+                "share_url":   "/share/" + share.ShareToken,
+                "expires_at":  share.ExpiresAt,
+                "status":      share.Status,
+                "status_description": shareStatusDesc(share.Status),
+        })</span>
+}
+
+func (h *Handler) GetShareStatus(c *gin.Context) <span class="cov0" title="0">{
+        userID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">share, err := h.service.GetShareStatus(c, userID, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 404, response.ErrNotFound, "分享不存在")
+                return
+        }</span>
+
+        <span class="cov0" title="0">resp := gin.H{
+                "share_token":        share.ShareToken,
+                "share_url":          "/share/" + share.ShareToken,
+                "permission":         share.Permission,
+                "password_protected": share.PasswordHash.Valid,
+                "expires_at":         share.ExpiresAt,
+                "status":             share.Status,
+                "status_description": shareStatusDesc(share.Status),
+                "created_at":         share.CreatedAt,
+        }
+
+        if share.RejectionReason.Valid </span><span class="cov0" title="0">{
+                resp["rejection_reason"] = share.RejectionReason.String
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, resp)</span>
+}
+
+func (h *Handler) AccessShare(c *gin.Context) <span class="cov0" title="0">{
+        token := c.Param("token")
+        password := c.GetHeader("X-Share-Password")
+
+        noteItem, permission, err := h.service.AccessShare(c, token, password)
+        if err != nil </span><span class="cov0" title="0">{
+                switch err </span>{
+                case ErrSharePending:<span class="cov0" title="0">
+                        response.Error(c, 403, response.ErrForbidden, "分享待审核，暂不可访问")</span>
+                case ErrShareRejected:<span class="cov0" title="0">
+                        response.Error(c, 403, response.ErrForbidden, "分享未通过审核")</span>
+                case ErrShareExpired:<span class="cov0" title="0">
+                        response.Error(c, 410, response.ErrNotFound, "分享已过期")</span>
+                case ErrInvalidPassword:<span class="cov0" title="0">
+                        response.Error(c, 401, response.ErrUnauthorized, "需要密码访问")</span>
+                case ErrShareNotFound:<span class="cov0" title="0">
+                        response.Error(c, 404, response.ErrNotFound, "分享不存在")</span>
+                default:<span class="cov0" title="0">
+                        response.Error(c, 500, response.ErrInternalServerError, "获取分享失败")</span>
+                }
+                <span class="cov0" title="0">return</span>
+        }
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                "note": gin.H{
+                        "id":      noteItem.ID,
+                        "title":   noteItem.Title,
+                        "content": noteItem.Content,
+                },
+                "permission": permission,
+        })</span>
+}
+
+func (h *Handler) DeleteShare(c *gin.Context) <span class="cov0" title="0">{
+        userID, _ := uuid.Parse(c.GetString("user_id"))
+        noteID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的笔记 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.service.DeleteShare(c, userID, noteID); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "取消分享失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+
+// Admin share handlers
+func (h *Handler) GetPendingList(c *gin.Context) <span class="cov0" title="0">{
+        status := c.DefaultQuery("status", "pending")
+        keyword := c.Query("keyword")
+        page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+        size, _ := strconv.Atoi(c.DefaultQuery("size", "20"))
+
+        items, total, err := h.service.ListShares(c, status, keyword, page, size)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取分享列表失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.SuccessPaginated(c, items, total, page, size)</span>
+}
+
+func (h *Handler) GetShareDetail(c *gin.Context) <span class="cov0" title="0">{
+        shareID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的分享 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">share, err := h.service.GetShareDetail(c, shareID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 404, response.ErrNotFound, "分享不存在")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, share)</span>
+}
+
+func (h *Handler) GetShareStats(c *gin.Context) <span class="cov0" title="0">{
+        stats, err := h.service.GetShareStats(c)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取分享统计失败")
+                return
+        }</span>
+        <span class="cov0" title="0">response.Success(c, stats)</span>
+}
+
+func (h *Handler) BatchReview(c *gin.Context) <span class="cov0" title="0">{
+        reviewerID, _ := uuid.Parse(c.GetString("user_id"))
+
+        var req struct {
+                ShareIDs []string `json:"share_ids" binding:"required"`
+                Action   string   `json:"action" binding:"required"`
+                Reason   string   `json:"reason"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if req.Action != "approve" &amp;&amp; req.Action != "reject" </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "action 必须为 approve 或 reject")
+                return
+        }</span>
+
+        <span class="cov0" title="0">var ids []uuid.UUID
+        for _, idStr := range req.ShareIDs </span><span class="cov0" title="0">{
+                id, err := uuid.Parse(idStr)
+                if err != nil </span><span class="cov0" title="0">{
+                        response.Error(c, 400, response.ErrBadRequest, fmt.Sprintf("无效的分享 ID: %s", idStr))
+                        return
+                }</span>
+                <span class="cov0" title="0">ids = append(ids, id)</span>
+        }
+
+        <span class="cov0" title="0">if err := h.service.BatchReview(c, ids, reviewerID, req.Action, req.Reason); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "批量审核失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, gin.H{"processed_count": len(ids)})</span>
+}
+
+func (h *Handler) ApproveShare(c *gin.Context) <span class="cov0" title="0">{
+        reviewerID, _ := uuid.Parse(c.GetString("user_id"))
+        shareID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的分享 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.service.Approve(c, shareID, reviewerID); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "审核失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">h.audit(c, "share.approve", "share", uuid.NullUUID{UUID: shareID, Valid: true}, nil)
+        response.Success(c, nil)</span>
+}
+
+func (h *Handler) RejectShare(c *gin.Context) <span class="cov0" title="0">{
+        reviewerID, _ := uuid.Parse(c.GetString("user_id"))
+        shareID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的分享 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">var req struct {
+                Reason string `json:"reason"`
+        }
+        c.ShouldBindJSON(&amp;req)
+
+        if err := h.service.Reject(c, shareID, reviewerID, req.Reason); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "审核失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">h.audit(c, "share.reject", "share", uuid.NullUUID{UUID: shareID, Valid: true}, gin.H{"reason": req.Reason})
+        response.Success(c, nil)</span>
+}
+
+func (h *Handler) ReReviewShare(c *gin.Context) <span class="cov0" title="0">{
+        reviewerID, _ := uuid.Parse(c.GetString("user_id"))
+        shareID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的分享 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.service.ReReview(c, shareID, reviewerID); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "复审失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">h.audit(c, "share.rereview", "share", uuid.NullUUID{UUID: shareID, Valid: true}, nil)
+        response.Success(c, nil)</span>
+}
+
+func (h *Handler) RevokeShare(c *gin.Context) <span class="cov0" title="0">{
+        reviewerID, _ := uuid.Parse(c.GetString("user_id"))
+        shareID, err := uuid.Parse(c.Param("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的分享 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.service.Revoke(c, shareID, reviewerID); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "撤回失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">h.audit(c, "share.revoke", "share", uuid.NullUUID{UUID: shareID, Valid: true}, nil)
+        response.Success(c, nil)</span>
+}
+
+func shareStatusDesc(status string) string <span class="cov0" title="0">{
+        switch status </span>{
+        case "pending":<span class="cov0" title="0">
+                return "待审核"</span>
+        case "approved":<span class="cov0" title="0">
+                return "已通过"</span>
+        case "rejected":<span class="cov0" title="0">
+                return "已拒绝"</span>
+        case "revoked":<span class="cov0" title="0">
+                return "已撤回"</span>
+        }
+        <span class="cov0" title="0">return status</span>
+}
+</pre>
+		
+		<pre class="file" id="file17" style="display: none">package share
+
+import (
+        "context"
+        "crypto/rand"
+        "database/sql"
+        "encoding/hex"
+        "errors"
+        "fmt"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "golang.org/x/crypto/bcrypt"
+)
+
+var (
+        ErrShareNotFound   = errors.New("share not found")
+        ErrShareExpired    = errors.New("share has expired")
+        ErrSharePending    = errors.New("share pending review")
+        ErrShareRejected   = errors.New("share rejected")
+        ErrInvalidPassword = errors.New("invalid password")
+        ErrShareExists     = errors.New("share already exists")
+)
+
+type NoteShare struct {
+        ID              uuid.UUID      `json:"id"`
+        NoteID          uuid.UUID      `json:"note_id"`
+        ShareToken      string         `json:"share_token"`
+        ShareType       string         `json:"share_type"`
+        Permission      string         `json:"permission"`
+        PasswordHash    sql.NullString `json:"-"`
+        ExpiresAt       sql.NullTime   `json:"expires_at"`
+        Status          string         `json:"status"`
+        ContentSnapshot sql.NullString `json:"-"`
+        RejectionReason sql.NullString `json:"rejection_reason,omitempty"`
+        CreatedAt       time.Time      `json:"created_at"`
+        CreatedBy       uuid.UUID      `json:"created_by"`
+}
+
+type ShareRepository struct {
+        pool *pgxpool.Pool
+}
+
+func NewShareRepository(pool *pgxpool.Pool) *ShareRepository <span class="cov0" title="0">{
+        return &amp;ShareRepository{pool: pool}
+}</span>
+
+func (r *ShareRepository) Create(ctx context.Context, share *NoteShare) error <span class="cov0" title="0">{
+        err := r.pool.QueryRow(ctx, `
+                INSERT INTO note_shares (note_id, share_token, share_type, permission, password_hash,
+                                                                  expires_at, status, content_snapshot, created_by)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                RETURNING id, created_at
+        `, share.NoteID, share.ShareToken, share.ShareType, share.Permission,
+                share.PasswordHash, share.ExpiresAt, share.Status, share.ContentSnapshot, share.CreatedBy,
+        ).Scan(&amp;share.ID, &amp;share.CreatedAt)
+        return err
+}</span>
+
+func (r *ShareRepository) GetByToken(ctx context.Context, token string) (*NoteShare, error) <span class="cov0" title="0">{
+        var s NoteShare
+        err := r.pool.QueryRow(ctx, `
+                SELECT id, note_id, share_token, share_type, permission, password_hash,
+                           expires_at, status, content_snapshot, rejection_reason, created_at, created_by
+                FROM note_shares WHERE share_token = $1
+        `, token).Scan(
+                &amp;s.ID, &amp;s.NoteID, &amp;s.ShareToken, &amp;s.ShareType, &amp;s.Permission, &amp;s.PasswordHash,
+                &amp;s.ExpiresAt, &amp;s.Status, &amp;s.ContentSnapshot, &amp;s.RejectionReason, &amp;s.CreatedAt, &amp;s.CreatedBy,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, ErrShareNotFound
+        }</span>
+        <span class="cov0" title="0">return &amp;s, nil</span>
+}
+
+func (r *ShareRepository) GetByNoteID(ctx context.Context, noteID uuid.UUID) (*NoteShare, error) <span class="cov0" title="0">{
+        var s NoteShare
+        err := r.pool.QueryRow(ctx, `
+                SELECT id, note_id, share_token, share_type, permission, password_hash,
+                           expires_at, status, content_snapshot, rejection_reason, created_at, created_by
+                FROM note_shares WHERE note_id = $1
+                ORDER BY created_at DESC LIMIT 1
+        `, noteID).Scan(
+                &amp;s.ID, &amp;s.NoteID, &amp;s.ShareToken, &amp;s.ShareType, &amp;s.Permission, &amp;s.PasswordHash,
+                &amp;s.ExpiresAt, &amp;s.Status, &amp;s.ContentSnapshot, &amp;s.RejectionReason, &amp;s.CreatedAt, &amp;s.CreatedBy,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, ErrShareNotFound
+        }</span>
+        <span class="cov0" title="0">return &amp;s, nil</span>
+}
+
+func (r *ShareRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status string, reviewerID uuid.UUID, reason string) error <span class="cov0" title="0">{
+        query := "UPDATE note_shares SET status = $1, reviewed_at = NOW(), reviewed_by = $2"
+        args := []interface{}{status, reviewerID}
+        idx := 3
+
+        if reason != "" </span><span class="cov0" title="0">{
+                query += fmt.Sprintf(", rejection_reason = $%d", idx)
+                args = append(args, reason)
+                idx++
+        }</span>
+
+        <span class="cov0" title="0">query += fmt.Sprintf(" WHERE id = $%d", idx)
+        args = append(args, id)
+
+        tag, err := r.pool.Exec(ctx, query, args...)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrShareNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func (r *ShareRepository) Delete(ctx context.Context, id uuid.UUID) error <span class="cov0" title="0">{
+        tag, err := r.pool.Exec(ctx, "DELETE FROM note_shares WHERE id = $1", id)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if tag.RowsAffected() == 0 </span><span class="cov0" title="0">{
+                return ErrShareNotFound
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func generateShareToken() string <span class="cov8" title="1">{
+        b := make([]byte, 16)
+        rand.Read(b)
+        return hex.EncodeToString(b)
+}</span>
+
+func hashPassword(password string) (string, error) <span class="cov8" title="1">{
+        h, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+        return string(h), err
+}</span>
+
+func verifyPassword(hash, password string) bool <span class="cov8" title="1">{
+        return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
+}</span>
+
+// AdminShareListItem is a share list item enriched with user/note info for admin review
+type AdminShareListItem struct {
+        ID              uuid.UUID  `json:"id"`
+        ShareToken      string     `json:"share_token"`
+        NoteID          uuid.UUID  `json:"note_id"`
+        NoteTitle       string     `json:"note_title"`
+        NotePreview     string     `json:"note_preview"`
+        ContentSnapshot string     `json:"content_snapshot,omitempty"`
+        OwnerID         uuid.UUID  `json:"owner_id"`
+        OwnerUsername   string     `json:"owner_username"`
+        OwnerEmail      string     `json:"owner_email"`
+        ShareType       string     `json:"share_type"`
+        Permission      string     `json:"permission"`
+        PasswordProtected bool     `json:"password_protected"`
+        ExpiresAt       *time.Time `json:"expires_at"`
+        Status          string     `json:"status"`
+        CreatedAt       time.Time  `json:"created_at"`
+        ReviewedAt      *time.Time `json:"reviewed_at"`
+        ReviewedBy      string     `json:"reviewed_by,omitempty"`
+        RejectionReason string     `json:"rejection_reason,omitempty"`
+}
+
+// ListShares returns shares with user/note info for admin review.
+// statusFilter can be "pending", "approved", "rejected", "revoked", or empty for all.
+func (r *ShareRepository) ListShares(ctx context.Context, statusFilter, keyword string, page, size int) ([]AdminShareListItem, int64, error) <span class="cov0" title="0">{
+        if page &lt; 1 </span><span class="cov0" title="0">{
+                page = 1
+        }</span>
+        <span class="cov0" title="0">if size &lt; 1 </span><span class="cov0" title="0">{
+                size = 20
+        }</span>
+        <span class="cov0" title="0">offset := (page - 1) * size
+
+        // Build query
+        where := "WHERE 1=1"
+        args := []interface{}{}
+        idx := 1
+
+        if statusFilter != "" </span><span class="cov0" title="0">{
+                where += fmt.Sprintf(" AND s.status = $%d", idx)
+                args = append(args, statusFilter)
+                idx++
+        }</span>
+
+        <span class="cov0" title="0">if keyword != "" </span><span class="cov0" title="0">{
+                where += fmt.Sprintf(" AND (n.title ILIKE $%d OR u.username ILIKE $%d OR u.email ILIKE $%d)", idx, idx, idx)
+                args = append(args, "%"+keyword+"%")
+                idx++
+        }</span>
+
+        // Count query
+        <span class="cov0" title="0">var total int64
+        countQuery := fmt.Sprintf("SELECT COUNT(*) FROM note_shares s JOIN notes n ON n.id = s.note_id JOIN users u ON u.id = s.created_by %s", where)
+        if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&amp;total); err != nil </span><span class="cov0" title="0">{
+                return nil, 0, err
+        }</span>
+
+        // Data query with content_snapshot
+        <span class="cov0" title="0">query := fmt.Sprintf(`
+                SELECT s.id, s.note_id, s.share_token, s.share_type, s.permission,
+                           s.password_hash IS NOT NULL AS password_protected, s.expires_at, s.status,
+                           s.content_snapshot, s.created_at, s.reviewed_at,
+                           s.rejection_reason,
+                           n.title AS note_title,
+                           u.id AS owner_id, u.username AS owner_username, u.email AS owner_email,
+                           rev.username AS reviewed_by_username
+                FROM note_shares s
+                JOIN notes n ON n.id = s.note_id
+                JOIN users u ON u.id = s.created_by
+                LEFT JOIN users rev ON rev.id = s.reviewed_by
+                %s
+                ORDER BY s.created_at DESC
+                LIMIT $%d OFFSET $%d
+        `, where, idx, idx+1)
+
+        args = append(args, size, offset)
+
+        rows, err := r.pool.Query(ctx, query, args...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, 0, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var items []AdminShareListItem
+        for rows.Next() </span><span class="cov0" title="0">{
+                var item AdminShareListItem
+                var expiresAt sql.NullTime
+                var passwordProtected bool
+                var contentSnapshot sql.NullString
+                var reviewedAt sql.NullTime
+                var reviewedBy sql.NullString
+                var rejectionReason sql.NullString
+                if err := rows.Scan(
+                        &amp;item.ID, &amp;item.NoteID, &amp;item.ShareToken, &amp;item.ShareType, &amp;item.Permission,
+                        &amp;passwordProtected, &amp;expiresAt, &amp;item.Status,
+                        &amp;contentSnapshot, &amp;item.CreatedAt, &amp;reviewedAt,
+                        &amp;rejectionReason,
+                        &amp;item.NoteTitle,
+                        &amp;item.OwnerID, &amp;item.OwnerUsername, &amp;item.OwnerEmail,
+                        &amp;reviewedBy,
+                ); err != nil </span><span class="cov0" title="0">{
+                        return nil, 0, err
+                }</span>
+                <span class="cov0" title="0">item.PasswordProtected = passwordProtected
+                if expiresAt.Valid </span><span class="cov0" title="0">{
+                        item.ExpiresAt = &amp;expiresAt.Time
+                }</span>
+                <span class="cov0" title="0">if contentSnapshot.Valid </span><span class="cov0" title="0">{
+                        item.ContentSnapshot = contentSnapshot.String
+                        // Generate a short preview from the snapshot
+                        if len(item.ContentSnapshot) &gt; 100 </span><span class="cov0" title="0">{
+                                item.NotePreview = item.ContentSnapshot[:100] + "..."
+                        }</span> else<span class="cov0" title="0"> {
+                                item.NotePreview = item.ContentSnapshot
+                        }</span>
+                }
+                <span class="cov0" title="0">if reviewedAt.Valid </span><span class="cov0" title="0">{
+                        item.ReviewedAt = &amp;reviewedAt.Time
+                }</span>
+                <span class="cov0" title="0">if reviewedBy.Valid </span><span class="cov0" title="0">{
+                        item.ReviewedBy = reviewedBy.String
+                }</span>
+                <span class="cov0" title="0">if rejectionReason.Valid </span><span class="cov0" title="0">{
+                        item.RejectionReason = rejectionReason.String
+                }</span>
+                <span class="cov0" title="0">items = append(items, item)</span>
+        }
+        <span class="cov0" title="0">if items == nil </span><span class="cov0" title="0">{
+                items = []AdminShareListItem{}
+        }</span>
+        <span class="cov0" title="0">return items, total, rows.Err()</span>
+}
+
+// GetShareDetail returns a single share with full detail for admin review.
+func (r *ShareRepository) GetShareDetail(ctx context.Context, shareID uuid.UUID) (*AdminShareListItem, error) <span class="cov0" title="0">{
+        var item AdminShareListItem
+        var expiresAt sql.NullTime
+        var passwordProtected bool
+        var contentSnapshot sql.NullString
+        var reviewedAt sql.NullTime
+        var reviewedBy sql.NullString
+        var rejectionReason sql.NullString
+
+        err := r.pool.QueryRow(ctx, `
+                SELECT s.id, s.note_id, s.share_token, s.share_type, s.permission,
+                           s.password_hash IS NOT NULL AS password_protected, s.expires_at, s.status,
+                           s.content_snapshot, s.created_at, s.reviewed_at,
+                           s.rejection_reason,
+                           n.title AS note_title,
+                           u.id AS owner_id, u.username AS owner_username, u.email AS owner_email,
+                           rev.username AS reviewed_by_username
+                FROM note_shares s
+                JOIN notes n ON n.id = s.note_id
+                JOIN users u ON u.id = s.created_by
+                LEFT JOIN users rev ON rev.id = s.reviewed_by
+                WHERE s.id = $1
+        `, shareID).Scan(
+                &amp;item.ID, &amp;item.NoteID, &amp;item.ShareToken, &amp;item.ShareType, &amp;item.Permission,
+                &amp;passwordProtected, &amp;expiresAt, &amp;item.Status,
+                &amp;contentSnapshot, &amp;item.CreatedAt, &amp;reviewedAt,
+                &amp;rejectionReason,
+                &amp;item.NoteTitle,
+                &amp;item.OwnerID, &amp;item.OwnerUsername, &amp;item.OwnerEmail,
+                &amp;reviewedBy,
+        )
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, ErrShareNotFound
+        }</span>
+
+        <span class="cov0" title="0">item.PasswordProtected = passwordProtected
+        if expiresAt.Valid </span><span class="cov0" title="0">{
+                item.ExpiresAt = &amp;expiresAt.Time
+        }</span>
+        <span class="cov0" title="0">if contentSnapshot.Valid </span><span class="cov0" title="0">{
+                item.ContentSnapshot = contentSnapshot.String
+                if len(item.ContentSnapshot) &gt; 100 </span><span class="cov0" title="0">{
+                        item.NotePreview = item.ContentSnapshot[:100] + "..."
+                }</span> else<span class="cov0" title="0"> {
+                        item.NotePreview = item.ContentSnapshot
+                }</span>
+        }
+        <span class="cov0" title="0">if reviewedAt.Valid </span><span class="cov0" title="0">{
+                item.ReviewedAt = &amp;reviewedAt.Time
+        }</span>
+        <span class="cov0" title="0">if reviewedBy.Valid </span><span class="cov0" title="0">{
+                item.ReviewedBy = reviewedBy.String
+        }</span>
+        <span class="cov0" title="0">if rejectionReason.Valid </span><span class="cov0" title="0">{
+                item.RejectionReason = rejectionReason.String
+        }</span>
+        <span class="cov0" title="0">return &amp;item, nil</span>
+}
+
+// GetShareStats returns counts by status.
+type ShareStats struct {
+        Total     int64 `json:"total"`
+        Pending   int64 `json:"pending"`
+        Approved  int64 `json:"approved"`
+        Rejected  int64 `json:"rejected"`
+        Revoked   int64 `json:"revoked"`
+}
+
+func (r *ShareRepository) GetShareStats(ctx context.Context) (*ShareStats, error) <span class="cov0" title="0">{
+        stats := &amp;ShareStats{}
+        err := r.pool.QueryRow(ctx, `
+                SELECT COUNT(*),
+                           COUNT(*) FILTER (WHERE status = 'pending'),
+                           COUNT(*) FILTER (WHERE status = 'approved'),
+                           COUNT(*) FILTER (WHERE status = 'rejected'),
+                           COUNT(*) FILTER (WHERE status = 'revoked')
+                FROM note_shares
+        `).Scan(&amp;stats.Total, &amp;stats.Pending, &amp;stats.Approved, &amp;stats.Rejected, &amp;stats.Revoked)
+        return stats, err
+}</span>
+
+// BatchUpdateStatus updates the status of multiple shares.
+func (r *ShareRepository) BatchUpdateStatus(ctx context.Context, shareIDs []uuid.UUID, status string, reviewerID uuid.UUID, reason string) error <span class="cov0" title="0">{
+        query := "UPDATE note_shares SET status = $1, reviewed_at = NOW(), reviewed_by = $2"
+        args := []interface{}{status, reviewerID}
+        idx := 3
+
+        if reason != "" </span><span class="cov0" title="0">{
+                query += fmt.Sprintf(", rejection_reason = $%d", idx)
+                args = append(args, reason)
+                idx++
+        }</span>
+
+        <span class="cov0" title="0">query += fmt.Sprintf(" WHERE id = ANY($%d)", idx)
+        args = append(args, shareIDs)
+
+        _, err := r.pool.Exec(ctx, query, args...)
+        return err</span>
+}
+</pre>
+		
+		<pre class="file" id="file18" style="display: none">package share
+
+import (
+        "context"
+        "database/sql"
+        "fmt"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/internal/note"
+)
+
+type Service struct {
+        shareRepo *ShareRepository
+        noteRepo  *note.NoteRepository
+}
+
+func NewService(shareRepo *ShareRepository, noteRepo *note.NoteRepository) *Service <span class="cov0" title="0">{
+        return &amp;Service{
+                shareRepo: shareRepo,
+                noteRepo:  noteRepo,
+        }
+}</span>
+
+type CreateShareRequest struct {
+        ShareType  string     `json:"share_type"`
+        Permission string     `json:"permission"`
+        Password   string     `json:"password"`
+        ExpiresAt  *time.Time `json:"expires_at"`
+}
+
+func (s *Service) CreateShare(ctx context.Context, userID, noteID uuid.UUID, req *CreateShareRequest) (*NoteShare, error) <span class="cov0" title="0">{
+        noteItem, err := s.noteRepo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if noteItem.OwnerID != userID </span><span class="cov0" title="0">{
+                return nil, note.ErrPermissionDenied
+        }</span>
+
+        // Check existing share
+        <span class="cov0" title="0">existing, err := s.shareRepo.GetByNoteID(ctx, noteID)
+        if err == nil &amp;&amp; existing.Status != "rejected" </span><span class="cov0" title="0">{
+                return nil, ErrShareExists
+        }</span>
+
+        <span class="cov0" title="0">passwordHash := sql.NullString{}
+        if req.Password != "" </span><span class="cov0" title="0">{
+                h, err := hashPassword(req.Password)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("hash password: %w", err)
+                }</span>
+                <span class="cov0" title="0">passwordHash = sql.NullString{String: h, Valid: true}</span>
+        }
+
+        <span class="cov0" title="0">expiresAt := sql.NullTime{}
+        if req.ExpiresAt != nil </span><span class="cov0" title="0">{
+                expiresAt = sql.NullTime{Time: *req.ExpiresAt, Valid: true}
+        }</span>
+
+        <span class="cov0" title="0">share := &amp;NoteShare{
+                NoteID:          noteID,
+                ShareToken:      generateShareToken(),
+                ShareType:       req.ShareType,
+                Permission:      req.Permission,
+                PasswordHash:    passwordHash,
+                ExpiresAt:       expiresAt,
+                Status:          "pending",
+                ContentSnapshot: sql.NullString{String: noteItem.Content, Valid: true},
+                CreatedBy:       userID,
+        }
+
+        if share.ShareType == "" </span><span class="cov0" title="0">{
+                share.ShareType = "link"
+        }</span>
+        <span class="cov0" title="0">if share.Permission == "" </span><span class="cov0" title="0">{
+                share.Permission = "read"
+        }</span>
+
+        <span class="cov0" title="0">if err := s.shareRepo.Create(ctx, share); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("create share: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return share, nil</span>
+}
+
+func (s *Service) GetShareStatus(ctx context.Context, userID, noteID uuid.UUID) (*NoteShare, error) <span class="cov0" title="0">{
+        noteItem, err := s.noteRepo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if noteItem.OwnerID != userID </span><span class="cov0" title="0">{
+                return nil, note.ErrPermissionDenied
+        }</span>
+
+        <span class="cov0" title="0">return s.shareRepo.GetByNoteID(ctx, noteID)</span>
+}
+
+func (s *Service) AccessShare(ctx context.Context, token, password string) (*note.Note, string, error) <span class="cov0" title="0">{
+        share, err := s.shareRepo.GetByToken(ctx, token)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", err
+        }</span>
+
+        // Check status
+        <span class="cov0" title="0">switch share.Status </span>{
+        case "pending":<span class="cov0" title="0">
+                return nil, "", ErrSharePending</span>
+        case "rejected":<span class="cov0" title="0">
+                return nil, "", ErrShareRejected</span>
+        }
+
+        // Check expiry
+        <span class="cov0" title="0">if share.ExpiresAt.Valid &amp;&amp; share.ExpiresAt.Time.Before(time.Now()) </span><span class="cov0" title="0">{
+                return nil, "", ErrShareExpired
+        }</span>
+
+        // Check password
+        <span class="cov0" title="0">if share.PasswordHash.Valid </span><span class="cov0" title="0">{
+                if password == "" || !verifyPassword(share.PasswordHash.String, password) </span><span class="cov0" title="0">{
+                        return nil, "", ErrInvalidPassword
+                }</span>
+        }
+
+        <span class="cov0" title="0">noteItem, err := s.noteRepo.GetByID(ctx, share.NoteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, "", err
+        }</span>
+
+        <span class="cov0" title="0">return noteItem, share.Permission, nil</span>
+}
+
+func (s *Service) DeleteShare(ctx context.Context, userID, noteID uuid.UUID) error <span class="cov0" title="0">{
+        share, err := s.shareRepo.GetByNoteID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">noteItem, err := s.noteRepo.GetByID(ctx, noteID)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">if noteItem.OwnerID != userID </span><span class="cov0" title="0">{
+                return note.ErrPermissionDenied
+        }</span>
+
+        <span class="cov0" title="0">return s.shareRepo.Delete(ctx, share.ID)</span>
+}
+
+func (s *Service) Approve(ctx context.Context, shareID, reviewerID uuid.UUID) error <span class="cov0" title="0">{
+        return s.shareRepo.UpdateStatus(ctx, shareID, "approved", reviewerID, "")
+}</span>
+
+func (s *Service) Reject(ctx context.Context, shareID, reviewerID uuid.UUID, reason string) error <span class="cov0" title="0">{
+        return s.shareRepo.UpdateStatus(ctx, shareID, "rejected", reviewerID, reason)
+}</span>
+
+func (s *Service) ReReview(ctx context.Context, shareID, reviewerID uuid.UUID) error <span class="cov0" title="0">{
+        return s.shareRepo.UpdateStatus(ctx, shareID, "pending", reviewerID, "")
+}</span>
+
+func (s *Service) Revoke(ctx context.Context, shareID, reviewerID uuid.UUID) error <span class="cov0" title="0">{
+        return s.shareRepo.UpdateStatus(ctx, shareID, "revoked", reviewerID, "")
+}</span>
+
+// Admin methods
+
+func (s *Service) ListShares(ctx context.Context, status, keyword string, page, size int) ([]AdminShareListItem, int64, error) <span class="cov0" title="0">{
+        return s.shareRepo.ListShares(ctx, status, keyword, page, size)
+}</span>
+
+func (s *Service) GetShareDetail(ctx context.Context, shareID uuid.UUID) (*AdminShareListItem, error) <span class="cov0" title="0">{
+        return s.shareRepo.GetShareDetail(ctx, shareID)
+}</span>
+
+func (s *Service) GetShareStats(ctx context.Context) (*ShareStats, error) <span class="cov0" title="0">{
+        return s.shareRepo.GetShareStats(ctx)
+}</span>
+
+func (s *Service) BatchReview(ctx context.Context, shareIDs []uuid.UUID, reviewerID uuid.UUID, action, reason string) error <span class="cov0" title="0">{
+        status := "approved"
+        if action == "reject" </span><span class="cov0" title="0">{
+                status = "rejected"
+        }</span>
+        <span class="cov0" title="0">return s.shareRepo.BatchUpdateStatus(ctx, shareIDs, status, reviewerID, reason)</span>
+}
+</pre>
+		
+		<pre class="file" id="file19" style="display: none">package user
+
+import (
+        "context"
+
+        "github.com/gin-gonic/gin"
+        "github.com/google/uuid"
+        "github.com/krasis/krasis/pkg/response"
+)
+
+type SessionManager interface {
+        GetUserSessionsMap(ctx context.Context, userID, currentSessionID string) ([]map[string]interface{}, error)
+        DeleteSession(ctx context.Context, sessionID string) error
+        DeleteAllForUser(ctx context.Context, userID string) error
+}
+
+type Handler struct {
+        service        *UserService
+        sessionManager SessionManager
+}
+
+func NewHandler(service *UserService, sessionManager SessionManager) *Handler <span class="cov8" title="1">{
+        return &amp;Handler{
+                service:        service,
+                sessionManager: sessionManager,
+        }
+}</span>
+
+func (h *Handler) GetMe(c *gin.Context) <span class="cov0" title="0">{
+        userID := c.GetString("user_id")
+        if userID == "" </span><span class="cov0" title="0">{
+                response.Error(c, 401, response.ErrUnauthorized, "未认证")
+                return
+        }</span>
+
+        <span class="cov0" title="0">id, err := uuid.Parse(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的用户 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">user, err := h.service.GetByID(c, id)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取用户信息失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, gin.H{
+                "id":         user.ID,
+                "email":      user.Email,
+                "username":   user.Username,
+                "avatar_url": user.AvatarURL,
+                "role":       c.GetString("role"),
+                "created_at": user.CreatedAt,
+        })</span>
+}
+
+func (h *Handler) GetSessions(c *gin.Context) <span class="cov8" title="1">{
+        userID := c.GetString("user_id")
+        sessionID := c.GetString("session_id")
+
+        sessions, err := h.sessionManager.GetUserSessionsMap(c, userID, sessionID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "获取设备列表失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, gin.H{
+                "sessions": sessions,
+        })</span>
+}
+
+func (h *Handler) DeleteSession(c *gin.Context) <span class="cov8" title="1">{
+        sessionID := c.Param("session_id")
+
+        if err := h.sessionManager.DeleteSession(c, sessionID); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "下线设备失败")
+                return
+        }</span>
+
+        <span class="cov8" title="1">response.Success(c, nil)</span>
+}
+
+func (h *Handler) DeleteAllSessions(c *gin.Context) <span class="cov0" title="0">{
+        userID := c.GetString("user_id")
+
+        if err := h.sessionManager.DeleteAllForUser(c, userID); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "下线所有设备失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+
+func (h *Handler) UpdateProfile(c *gin.Context) <span class="cov0" title="0">{
+        userID := c.GetString("user_id")
+
+        id, err := uuid.Parse(userID)
+        if err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "无效的用户 ID")
+                return
+        }</span>
+
+        <span class="cov0" title="0">var req struct {
+                Username  string `json:"username"`
+                AvatarURL string `json:"avatar_url"`
+        }
+        if err := c.ShouldBindJSON(&amp;req); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 400, response.ErrBadRequest, "参数错误")
+                return
+        }</span>
+
+        <span class="cov0" title="0">if err := h.service.UpdateProfile(c, id, req.Username, req.AvatarURL); err != nil </span><span class="cov0" title="0">{
+                response.Error(c, 500, response.ErrInternalServerError, "更新资料失败")
+                return
+        }</span>
+
+        <span class="cov0" title="0">response.Success(c, nil)</span>
+}
+</pre>
+		
+		<pre class="file" id="file20" style="display: none">package user
+
+import (
+        "context"
+        "database/sql"
+        "fmt"
+        "time"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/krasis/krasis/pkg/types"
+)
+
+type User struct {
+        ID           uuid.UUID  `json:"id"`
+        Email        string     `json:"email"`
+        Username     string     `json:"username"`
+        PasswordHash *string    `json:"-"`
+        AvatarURL    string     `json:"avatar_url"`
+        Status       int16      `json:"status"`
+        CreatedAt    time.Time      `json:"created_at"`
+        UpdatedAt    types.NullTime `json:"updated_at,omitempty"`
+}
+
+type UserOAuth struct {
+        ID                   uuid.UUID  `json:"id"`
+        UserID               uuid.UUID  `json:"user_id"`
+        Provider             string     `json:"provider"`
+        ProviderUserID       string     `json:"provider_user_id"`
+        ProviderAccessToken  string     `json:"-"`
+        ProviderRefreshToken string     `json:"-"`
+        TokenExpiresAt       sql.NullTime   `json:"-"`
+        CreatedAt            time.Time      `json:"-"`
+        UpdatedAt            sql.NullTime   `json:"-"`
+}
+
+type UserRepository struct {
+        pool *pgxpool.Pool
+}
+
+func NewUserRepository(pool *pgxpool.Pool) *UserRepository <span class="cov0" title="0">{
+        return &amp;UserRepository{pool: pool}
+}</span>
+
+func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*User, error) <span class="cov0" title="0">{
+        var u User
+        err := r.pool.QueryRow(ctx,
+                "SELECT id, email, username, password_hash, avatar_url, status, created_at, updated_at FROM users WHERE username = $1",
+                username,
+        ).Scan(&amp;u.ID, &amp;u.Email, &amp;u.Username, &amp;u.PasswordHash, &amp;u.AvatarURL, &amp;u.Status, &amp;u.CreatedAt, &amp;u.UpdatedAt)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;u, nil</span>
+}
+
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*User, error) <span class="cov0" title="0">{
+        var u User
+        err := r.pool.QueryRow(ctx,
+                "SELECT id, email, username, password_hash, avatar_url, status, created_at, updated_at FROM users WHERE email = $1",
+                email,
+        ).Scan(&amp;u.ID, &amp;u.Email, &amp;u.Username, &amp;u.PasswordHash, &amp;u.AvatarURL, &amp;u.Status, &amp;u.CreatedAt, &amp;u.UpdatedAt)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;u, nil</span>
+}
+
+func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*User, error) <span class="cov0" title="0">{
+        var u User
+        err := r.pool.QueryRow(ctx,
+                "SELECT id, email, username, password_hash, avatar_url, status, created_at, updated_at FROM users WHERE id = $1",
+                id,
+        ).Scan(&amp;u.ID, &amp;u.Email, &amp;u.Username, &amp;u.PasswordHash, &amp;u.AvatarURL, &amp;u.Status, &amp;u.CreatedAt, &amp;u.UpdatedAt)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;u, nil</span>
+}
+
+func (r *UserRepository) Create(ctx context.Context, email, username, avatarURL string) (*User, error) <span class="cov0" title="0">{
+        var u User
+        err := r.pool.QueryRow(ctx,
+                "INSERT INTO users (email, username, avatar_url) VALUES ($1, $2, $3) RETURNING id, email, username, password_hash, avatar_url, status, created_at, updated_at",
+                email, username, avatarURL,
+        ).Scan(&amp;u.ID, &amp;u.Email, &amp;u.Username, &amp;u.PasswordHash, &amp;u.AvatarURL, &amp;u.Status, &amp;u.CreatedAt, &amp;u.UpdatedAt)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;u, nil</span>
+}
+
+func (r *UserRepository) CreateWithPasswordHash(ctx context.Context, email, username, passwordHash, avatarURL string) (*User, error) <span class="cov0" title="0">{
+        var u User
+        err := r.pool.QueryRow(ctx,
+                "INSERT INTO users (email, username, password_hash, avatar_url) VALUES ($1, $2, $3, $4) RETURNING id, email, username, password_hash, avatar_url, status, created_at, updated_at",
+                email, username, passwordHash, avatarURL,
+        ).Scan(&amp;u.ID, &amp;u.Email, &amp;u.Username, &amp;u.PasswordHash, &amp;u.AvatarURL, &amp;u.Status, &amp;u.CreatedAt, &amp;u.UpdatedAt)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;u, nil</span>
+}
+
+func (r *UserRepository) UpdateProfile(ctx context.Context, id uuid.UUID, username, avatarURL string) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx,
+                "UPDATE users SET username = $1, avatar_url = $2, updated_at = NOW() WHERE id = $3",
+                username, avatarURL, id,
+        )
+        return err
+}</span>
+
+func (r *UserRepository) GetRole(ctx context.Context, userID uuid.UUID) (string, error) <span class="cov0" title="0">{
+        var role string
+        err := r.pool.QueryRow(ctx,
+                `SELECT r.name FROM roles r
+                 JOIN user_roles ur ON r.id = ur.role_id
+                 WHERE ur.user_id = $1
+                 ORDER BY r.name ASC
+                 LIMIT 1`,
+                userID,
+        ).Scan(&amp;role)
+        if err != nil </span><span class="cov0" title="0">{
+                if err == pgx.ErrNoRows </span><span class="cov0" title="0">{
+                        return "member", nil
+                }</span>
+                <span class="cov0" title="0">return "", err</span>
+        }
+        <span class="cov0" title="0">return role, nil</span>
+}
+
+func (r *UserRepository) AssignDefaultRole(ctx context.Context, userID uuid.UUID) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx,
+                `INSERT INTO user_roles (user_id, role_id)
+                 SELECT $1, id FROM roles WHERE name = 'member'
+                 ON CONFLICT DO NOTHING`,
+                userID,
+        )
+        return err
+}</span>
+
+type UserWithRole struct {
+        User
+        Role      string     `json:"role"`
+        LastLogin *time.Time `json:"last_login_at,omitempty"`
+}
+
+func (r *UserRepository) ListUsers(ctx context.Context, keyword, role string, page, size int) ([]*UserWithRole, int64, error) <span class="cov0" title="0">{
+        where := "WHERE 1=1"
+        args := []interface{}{}
+        argIdx := 1
+
+        if keyword != "" </span><span class="cov0" title="0">{
+                where += fmt.Sprintf(" AND (u.username ILIKE $%d OR u.email ILIKE $%d)", argIdx, argIdx)
+                args = append(args, "%"+keyword+"%")
+                argIdx++
+        }</span>
+        <span class="cov0" title="0">if role != "" </span><span class="cov0" title="0">{
+                where += fmt.Sprintf(" AND r.name = $%d", argIdx)
+                args = append(args, role)
+                argIdx++
+        }</span>
+
+        <span class="cov0" title="0">var total int64
+        countQuery := fmt.Sprintf(`
+                SELECT COUNT(*) FROM users u
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                LEFT JOIN roles r ON ur.role_id = r.id
+                %s
+        `, where)
+        if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&amp;total); err != nil </span><span class="cov0" title="0">{
+                return nil, 0, err
+        }</span>
+
+        <span class="cov0" title="0">offset := (page - 1) * size
+        args = append(args, size, offset)
+
+        query := fmt.Sprintf(`
+                SELECT u.id, u.email, u.username, u.avatar_url, u.status, u.created_at, u.updated_at,
+                           COALESCE(r.name, 'member') AS role
+                FROM users u
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                LEFT JOIN roles r ON ur.role_id = r.id
+                %s
+                ORDER BY u.created_at DESC
+                LIMIT $%d OFFSET $%d
+        `, where, argIdx, argIdx+1)
+
+        rows, err := r.pool.Query(ctx, query, args...)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, 0, err
+        }</span>
+        <span class="cov0" title="0">defer rows.Close()
+
+        var users []*UserWithRole
+        for rows.Next() </span><span class="cov0" title="0">{
+                var u UserWithRole
+                if err := rows.Scan(
+                        &amp;u.ID, &amp;u.Email, &amp;u.Username, &amp;u.AvatarURL, &amp;u.Status,
+                        &amp;u.CreatedAt, &amp;u.UpdatedAt, &amp;u.Role,
+                ); err != nil </span><span class="cov0" title="0">{
+                        return nil, 0, err
+                }</span>
+                <span class="cov0" title="0">users = append(users, &amp;u)</span>
+        }
+
+        <span class="cov0" title="0">return users, total, nil</span>
+}
+
+func (r *UserRepository) UpdateRole(ctx context.Context, userID uuid.UUID, roleName string) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx, `
+                UPDATE user_roles SET role_id = (SELECT id FROM roles WHERE name = $1)
+                WHERE user_id = $2
+        `, roleName, userID)
+        return err
+}</span>
+
+func (r *UserRepository) UpdateStatus(ctx context.Context, userID uuid.UUID, status int16) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx,
+                "UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2",
+                status, userID,
+        )
+        return err
+}</span>
+
+func (r *UserRepository) Delete(ctx context.Context, userID uuid.UUID) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", userID)
+        return err
+}</span>
+
+func (r *UserRepository) BatchUpdateStatus(ctx context.Context, userIDs []uuid.UUID, status int16) error <span class="cov0" title="0">{
+        _, err := r.pool.Exec(ctx,
+                "UPDATE users SET status = $1, updated_at = NOW() WHERE id = ANY($2)",
+                status, userIDs,
+        )
+        return err
+}</span>
+
+func (r *UserRepository) GetGroupID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) <span class="cov0" title="0">{
+        var groupID uuid.UUID
+        err := r.pool.QueryRow(ctx,
+                "SELECT group_id FROM users WHERE id = $1", userID,
+        ).Scan(&amp;groupID)
+        if err != nil </span><span class="cov0" title="0">{
+                return uuid.Nil, err
+        }</span>
+        <span class="cov0" title="0">return groupID, nil</span>
+}
+
+func (r *UserRepository) Count(ctx context.Context) (int64, error) <span class="cov0" title="0">{
+        var count int64
+        err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&amp;count)
+        return count, err
+}</span>
+</pre>
+		
+		<pre class="file" id="file21" style="display: none">package user
+
+import (
+        "context"
+        "fmt"
+
+        "github.com/google/uuid"
+        "golang.org/x/crypto/bcrypt"
+)
+
+type UserService struct {
+        repo *UserRepository
+}
+
+func NewUserService(repo *UserRepository) *UserService <span class="cov0" title="0">{
+        return &amp;UserService{repo: repo}
+}</span>
+
+func (s *UserService) GetOrCreateByOAuth(ctx context.Context, email, username, avatarURL string) (*User, error) <span class="cov0" title="0">{
+        user, err := s.repo.GetByEmail(ctx, email)
+        if err != nil </span><span class="cov0" title="0">{
+                // User not found, create new
+                user, err = s.repo.Create(ctx, email, username, avatarURL)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("create user: %w", err)
+                }</span>
+                <span class="cov0" title="0">if err := s.repo.AssignDefaultRole(ctx, user.ID); err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("assign default role: %w", err)
+                }</span>
+                <span class="cov0" title="0">return user, nil</span>
+        }
+        <span class="cov0" title="0">return user, nil</span>
+}
+
+func (s *UserService) GetByID(ctx context.Context, id uuid.UUID) (*User, error) <span class="cov0" title="0">{
+        return s.repo.GetByID(ctx, id)
+}</span>
+
+func (s *UserService) UpdateProfile(ctx context.Context, id uuid.UUID, username, avatarURL string) error <span class="cov0" title="0">{
+        return s.repo.UpdateProfile(ctx, id, username, avatarURL)
+}</span>
+
+func (s *UserService) GetRole(ctx context.Context, userID uuid.UUID) (string, error) <span class="cov0" title="0">{
+        return s.repo.GetRole(ctx, userID)
+}</span>
+
+var validRoles = map[string]bool{"admin": true, "member": true, "viewer": true}
+
+func (s *UserService) ListUsers(ctx context.Context, keyword, role string, page, size int) ([]*UserWithRole, int64, error) <span class="cov0" title="0">{
+        if page &lt; 1 </span><span class="cov0" title="0">{
+                page = 1
+        }</span>
+        <span class="cov0" title="0">if size &lt; 1 || size &gt; 100 </span><span class="cov0" title="0">{
+                size = 20
+        }</span>
+        <span class="cov0" title="0">return s.repo.ListUsers(ctx, keyword, role, page, size)</span>
+}
+
+func (s *UserService) UpdateUserRole(ctx context.Context, userID uuid.UUID, roleName string) error <span class="cov0" title="0">{
+        if !validRoles[roleName] </span><span class="cov0" title="0">{
+                return fmt.Errorf("invalid role: %s", roleName)
+        }</span>
+        <span class="cov0" title="0">return s.repo.UpdateRole(ctx, userID, roleName)</span>
+}
+
+func (s *UserService) UpdateUserStatus(ctx context.Context, userID uuid.UUID, status int16) error <span class="cov0" title="0">{
+        return s.repo.UpdateStatus(ctx, userID, status)
+}</span>
+
+func (s *UserService) CreateUser(ctx context.Context, email, username, password, role string) (*User, error) <span class="cov0" title="0">{
+        user, err := s.repo.Create(ctx, email, username, "")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if role != "" &amp;&amp; validRoles[role] </span><span class="cov0" title="0">{
+                s.repo.UpdateRole(ctx, user.ID, role)
+        }</span> else<span class="cov0" title="0"> {
+                s.repo.AssignDefaultRole(ctx, user.ID)
+        }</span>
+        <span class="cov0" title="0">return user, nil</span>
+}
+
+func (s *UserService) RegisterLocal(ctx context.Context, email, username, password string) (*User, error) <span class="cov0" title="0">{
+        if email == "" || username == "" || password == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("missing fields")
+        }</span>
+        <span class="cov0" title="0">if len(password) &lt; 6 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("password too short")
+        }</span>
+
+        // ensure email uniqueness
+        <span class="cov0" title="0">if _, err := s.repo.GetByEmail(ctx, email); err == nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("email already exists")
+        }</span>
+
+        <span class="cov0" title="0">hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("hash password: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">user, err := s.repo.CreateWithPasswordHash(ctx, email, username, string(hash), "")
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if err := s.repo.AssignDefaultRole(ctx, user.ID); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("assign default role: %w", err)
+        }</span>
+        <span class="cov0" title="0">return user, nil</span>
+}
+
+func (s *UserService) AuthenticateByUsername(ctx context.Context, username, password string) (*User, error) <span class="cov0" title="0">{
+        user, err := s.repo.GetByUsername(ctx, username)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid credentials")
+        }</span>
+        <span class="cov0" title="0">if user.PasswordHash == nil || *user.PasswordHash == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid credentials")
+        }</span>
+        <span class="cov0" title="0">if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("invalid credentials")
+        }</span>
+        <span class="cov0" title="0">if user.Status == 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("user disabled")
+        }</span>
+        <span class="cov0" title="0">return user, nil</span>
+}
+
+func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error <span class="cov0" title="0">{
+        return s.repo.Delete(ctx, userID)
+}</span>
+
+func (s *UserService) BatchUpdateStatus(ctx context.Context, userIDs []uuid.UUID, status int16) error <span class="cov0" title="0">{
+        return s.repo.BatchUpdateStatus(ctx, userIDs, status)
+}</span>
+
+func (s *UserService) GetGroupID(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) <span class="cov0" title="0">{
+        return s.repo.GetGroupID(ctx, userID)
+}</span>
+
+func (s *UserService) CountUsers(ctx context.Context) (int64, error) <span class="cov0" title="0">{
+        return s.repo.Count(ctx)
+}</span>
+</pre>
+		
+		<pre class="file" id="file22" style="display: none">package response
+
+import (
+        "net/http"
+
+        "github.com/gin-gonic/gin"
+)
+
+type Response struct {
+        Code    int         `json:"code"`
+        Message string      `json:"message"`
+        Data    interface{} `json:"data,omitempty"`
+}
+
+type PaginatedData struct {
+        Items   interface{} `json:"items"`
+        Total   int64       `json:"total"`
+        Page    int         `json:"page"`
+        Size    int         `json:"size"`
+        HasMore bool        `json:"has_more"`
+}
+
+func Success(c *gin.Context, data interface{}) <span class="cov8" title="1">{
+        c.JSON(http.StatusOK, Response{
+                Code:    0,
+                Message: "success",
+                Data:    data,
+        })
+}</span>
+
+func SuccessPaginated(c *gin.Context, items interface{}, total int64, page, size int) <span class="cov8" title="1">{
+        c.JSON(http.StatusOK, Response{
+                Code:    0,
+                Message: "success",
+                Data: PaginatedData{
+                        Items:   items,
+                        Total:   total,
+                        Page:    page,
+                        Size:    size,
+                        HasMore: int64(page*size) &lt; total,
+                },
+        })
+}</span>
+
+func Error(c *gin.Context, httpStatus int, code int, message string) <span class="cov8" title="1">{
+        resp := Response{
+                Code:    code,
+                Message: message,
+        }
+        c.JSON(httpStatus, resp)
+}</span>
+
+const (
+        ErrBadRequest          = 1001
+        ErrUnauthorized        = 1002
+        ErrForbidden           = 1003
+        ErrNotFound            = 1004
+        ErrConflict            = 1005
+        ErrUnprocessableEntity = 1006
+        ErrTooManyRequests     = 2001
+        ErrInternalServerError = 3001
+        ErrServiceUnavailable  = 3002
+)
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
