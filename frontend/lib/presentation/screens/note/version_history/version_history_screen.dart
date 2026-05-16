@@ -14,7 +14,7 @@ class VersionHistoryScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Version History'),
+        title: const Text('版本历史'),
       ),
       body: state.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -24,13 +24,13 @@ class VersionHistoryScreen extends ConsumerWidget {
             children: [
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 8),
-              Text('Failed to load: $e'),
+              Text('加载失败: $e'),
             ],
           ),
         ),
         data: (versions) {
           if (versions.isEmpty) {
-            return const Center(child: Text('No version history available'));
+            return const Center(child: Text('暂无版本历史'));
           }
           return ListView.separated(
             itemCount: versions.length,
@@ -50,13 +50,13 @@ class VersionHistoryScreen extends ConsumerWidget {
                 ),
                 title: Text(v.changeSummary?.isNotEmpty == true
                     ? v.changeSummary!
-                    : 'Version ${v.version}'),
+                    : '版本 ${v.version}'),
                 subtitle: Text(
-                  '${_formatDate(v.createdAt)}${v.changedBy != null ? ' by ${v.changedBy}' : ''}',
+                  '${_formatDate(v.createdAt)}${v.changedBy != null ? ' 由 ${v.changedBy}' : ''}',
                 ),
                 trailing: OutlinedButton(
                   onPressed: () => _showRestoreDialog(context, ref, v.version),
-                  child: const Text('Restore'),
+                  child: const Text('恢复'),
                 ),
               );
             },
@@ -70,15 +70,14 @@ class VersionHistoryScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Restore Version'),
+        title: const Text('恢复版本'),
         content: Text(
-          'Are you sure you want to restore version $version? '
-          'Current changes will be saved as a new version.',
+          '确定要恢复到版本 $version 吗？\n当前版本会被备份为新版本。',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () {
@@ -86,10 +85,10 @@ class VersionHistoryScreen extends ConsumerWidget {
                   .restoreVersion(version);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Restored to version $version')),
+                SnackBar(content: Text('已恢复到版本 $version')),
               );
             },
-            child: const Text('Restore'),
+            child: const Text('恢复'),
           ),
         ],
       ),
@@ -99,10 +98,10 @@ class VersionHistoryScreen extends ConsumerWidget {
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
+    if (diff.inDays < 1) return '${diff.inHours}小时前';
+    if (diff.inDays < 7) return '${diff.inDays}天前';
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }

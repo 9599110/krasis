@@ -15,6 +15,14 @@ import TextAlign from '@tiptap/extension-text-align'
 import Image from '@tiptap/extension-image'
 import FontFamily from '@tiptap/extension-font-family'
 import { presignUpload, confirmUpload } from '../api/files'
+import {
+  hasSessionKey,
+  hasStoredKey,
+  unlockKey,
+  encryptNoteContent,
+  decryptNoteContent,
+  isEncryptedContent,
+} from '../crypto/keyStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,13 +34,26 @@ const saving = ref(false)
 const version = ref(1)
 const saveTimer = ref<any>(null)
 const isNew = computed(() => id.value === 'new')
+const folderId = computed(() => route.query.folder ? String(route.query.folder) : undefined)
+// 内容快照，避免对未变更的内容触发的保存
+let lastSavedContent = ''
+let lastSavedTitle = ''
 
-// Share dialog state
-const showShareDialog = ref(false)
-const shareLoading = ref(false)
-const shareLink = ref('')
-const sharePassword = ref('')
-const shareExpiresDays = ref<number | null>(null)
+// Encryption state
+const encryptionEnabled = ref(false)
+const noteIsEncrypted = ref(false)
+const encryptionUnlocked = ref(false)
+const decrypting = ref(false)
+
+// Password unlock dialog state
+const showPasswordDialog = ref(false)
+const passwordDialogMode = ref<'encrypt' | 'download'>('encrypt')
+const passwordInput = ref('')
+const passwordDialogLoading = ref(false)
+let passwordDialogResolve: ((ok: boolean) => void) | null = null
+
+// Download note state
+const noteContentForDownload = ref('')
 
 const TITLE_MAX_LEN = 80
 
@@ -203,9 +224,39 @@ async function loadNote() {
   try {
     const res = await getNote(id.value)
     const d = res.data?.data || res.data || {}
+    noteIsEncrypted.value = d.is_encrypted === true
+    encryptionUnlocked.value = hasSessionKey()
+    // If note is already encrypted, sync the toggle state
+    if (noteIsEncrypted.value) {
+      encryptionEnabled.value = true
+    }
+
     title.value = d.title || ''
-    editor.value?.commands.setContent(d.content || '')
+
+    // Handle encrypted content
+    let content = d.content || ''
+    if (noteIsEncrypted.value && content) {
+      if (hasSessionKey() && isEncryptedContent(content)) {
+        decrypting.value = true
+        try {
+          content = await decryptNoteContent(content)
+          encryptionUnlocked.value = true
+        } catch {
+          content = '🔒 **笔记已加密，无法自动解密。**\n\n请确保 ECC 密钥已解锁（设置 → 加密密钥管理）。'
+          encryptionUnlocked.value = false
+        } finally {
+          decrypting.value = false
+        }
+      } else if (!hasSessionKey()) {
+        content = '🔒 **笔记已加密。**\n\n请前往「加密密钥管理」页面解锁密钥后再查看。'
+      }
+    }
+
+    editor.value?.commands.setContent(content)
     version.value = d.version || 1
+    // 记录编辑器中显示的内容快照，用于对比变更（对加密笔记用解密后内容）
+    lastSavedContent = content
+    lastSavedTitle = d.title || ''
   } catch {
     MessagePlugin.error('加载笔记失败')
     router.push({ name: 'notes' })
@@ -225,25 +276,64 @@ async function doSave() {
   try {
     const markdown = (editor.value as any)?.storage?.markdown?.getMarkdown?.() ?? ''
     const plainText = editor.value?.getText?.() ?? ''
+
+    // 如果内容和标题都未变更，跳过保存请求
+    if (!isNew.value && markdown === lastSavedContent && title.value === lastSavedTitle) {
+      return
+    }
+
+    // 新笔记且无内容则不存储（即使有标题）
+    if (isNew.value && !markdown.trim()) {
+      return
+    }
     if (!title.value.trim()) {
       title.value = deriveTitleFromText(plainText)
     }
+
+    // Determine if we should encrypt:
+    // - For new notes: only if the encryption toggle is on AND has content
+    // - For existing encrypted notes: ALWAYS re-encrypt (don't save plaintext to server)
+    const shouldEncrypt = noteIsEncrypted.value
+      || (encryptionEnabled.value && hasSessionKey() && markdown.trim().length > 0)
+    let contentToSave = markdown
+
+    // Guard: if note is encrypted but key is locked, don't save
+    if (noteIsEncrypted.value && !hasSessionKey()) {
+      MessagePlugin.warning('笔记已加密，请先解锁密钥后再保存')
+      return
+    }
+
+    // Re-encrypt for already encrypted notes (even if empty content)
+    if (shouldEncrypt) {
+      contentToSave = await encryptNoteContent(markdown)
+    }
+
     if (isNew.value) {
-      const res = await createNote({ title: title.value, content: markdown })
+      const payload: Record<string, any> = { title: title.value, content: contentToSave }
+      if (shouldEncrypt) payload.is_encrypted = true
+      if (folderId.value) payload.folder_id = folderId.value
+      const res = await createNote(payload)
       const d = res.data?.data || res.data || {}
+      noteIsEncrypted.value = shouldEncrypt
       router.replace({ name: 'note-edit', params: { id: d.id } })
     } else {
+      const payload: UpdateNoteRequest = {
+        title: title.value,
+        content: contentToSave,
+      }
+      if (shouldEncrypt) payload.is_encrypted = true
       const res = await updateNote(
         id.value,
-        {
-          title: title.value,
-          content: markdown,
-        },
+        payload,
         version.value,
       )
       const d = res.data?.data || res.data || {}
+      noteIsEncrypted.value = shouldEncrypt
       version.value = d.version || version.value
     }
+    // 记录编辑器中显示的内容快照，用于下次对比变更
+    lastSavedContent = markdown
+    lastSavedTitle = title.value
     MessagePlugin.success({ content: '已保存', duration: 1000 })
   } catch (e: any) {
     if (e.isVersionConflict) {
@@ -261,67 +351,101 @@ async function handleSave() {
   await doSave()
 }
 
+// 标题变更单独触发保存（不影响编辑器内容的 AutoSave 计时器）
 watch([title], () => {
-  scheduleAutoSave()
+  if (saveTimer.value) clearTimeout(saveTimer.value)
+  saveTimer.value = setTimeout(doSave, 3000)
 })
 
-async function openShareDialog() {
-  showShareDialog.value = true
-  shareLink.value = ''
-  sharePassword.value = ''
-  shareExpiresDays.value = null
-  await checkExistingShare()
-}
-
-async function createShare() {
-  if (isNew.value) {
-    MessagePlugin.warning('请先保存笔记后再分享')
+// ─── Password unlock dialog ─────────────────────────────────────────────────
+async function handlePasswordUnlock() {
+  if (!passwordInput.value) {
+    MessagePlugin.warning('请输入密码')
     return
   }
-  shareLoading.value = true
+  passwordDialogLoading.value = true
   try {
-    const body: Record<string, any> = {}
-    if (sharePassword.value) body.password = sharePassword.value
-    if (shareExpiresDays.value) {
-      const d = new Date()
-      d.setDate(d.getDate() + shareExpiresDays.value)
-      body.expires_at = d.toISOString()
+    const ok = await unlockKey(passwordInput.value)
+    if (ok) {
+      passwordDialogLoading.value = false
+      showPasswordDialog.value = false
+      passwordInput.value = ''
+      MessagePlugin.success('密钥已解锁')
+
+      // If mode was encrypt, toggle encryption on after unlock
+      if (passwordDialogMode.value === 'encrypt') {
+        encryptionEnabled.value = !encryptionEnabled.value
+        if (encryptionEnabled.value) {
+          MessagePlugin.success('已开启加密，保存时将自动加密笔记内容')
+        } else {
+          MessagePlugin.info('已关闭加密')
+        }
+      } else if (passwordDialogMode.value === 'download') {
+        // Perform the download now that key is unlocked
+        await doDownloadNote()
+      }
+    } else {
+      passwordDialogLoading.value = false
+      MessagePlugin.error('密码错误，无法解锁密钥')
     }
-    const res = await apiClient.post(`/notes/${id.value}/share`, body)
-    const d = res.data?.data || res.data || {}
-    shareLink.value = `${window.location.origin}/share/${d.token}`
-    MessagePlugin.success('分享链接已创建')
   } catch {
-    MessagePlugin.error('创建分享链接失败')
-  } finally {
-    shareLoading.value = false
+    passwordDialogLoading.value = false
+    MessagePlugin.error('解锁失败')
   }
 }
 
-function copyShareLink() {
-  navigator.clipboard.writeText(shareLink.value)
-  MessagePlugin.success('链接已复制到剪贴板')
-}
-
-async function checkExistingShare() {
-  try {
-    const res = await apiClient.get(`/notes/${id.value}/share`)
-    const d = res.data?.data || res.data || {}
-    if (d.token) {
-      shareLink.value = `${window.location.origin}/share/${d.token}`
-    }
-  } catch {
-    // no share exists
+// ─── Download note ──────────────────────────────────────────────────────────
+async function downloadNote() {
+  if (isNew.value) {
+    MessagePlugin.warning('请先保存笔记后再下载')
+    return
   }
+  if (noteIsEncrypted.value && !hasSessionKey()) {
+    // Need to unlock first
+    const stored = await hasStoredKey()
+    if (!stored) {
+      MessagePlugin.warning('无法下载加密笔记：请先在「加密密钥管理」页面生成并解锁密钥')
+      return
+    }
+    showPasswordDialog.value = true
+    passwordDialogMode.value = 'download'
+    return
+  }
+  await doDownloadNote()
 }
 
-async function deleteShare() {
+async function doDownloadNote() {
   try {
-    await apiClient.delete(`/notes/${id.value}/share`)
-    shareLink.value = ''
-    MessagePlugin.success('分享链接已取消')
+    // Get current content from editor
+    let content = ''
+    if (noteIsEncrypted.value) {
+      if (!hasSessionKey()) return
+      // Load the full content from server for download
+      const res = await getNote(id.value)
+      const d = res.data?.data || res.data || {}
+      const encryptedContent = d.content || ''
+      if (encryptedContent && isEncryptedContent(encryptedContent)) {
+        content = await decryptNoteContent(encryptedContent)
+      }
+    } else {
+      content = (editor.value as any)?.storage?.markdown?.getMarkdown?.() ?? editor.value?.getText?.() ?? ''
+    }
+
+    // Create download blob
+    const header = `# ${title.value}\n\n`
+    const fullContent = header + content
+    const blob = new Blob([fullContent], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${title.value || '笔记'}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    MessagePlugin.success('笔记已下载')
   } catch {
-    MessagePlugin.error('取消分享失败')
+    MessagePlugin.error('下载笔记失败')
   }
 }
 
@@ -343,6 +467,56 @@ function toggleOrderedList() {
 function toggleCodeBlock() {
   editor.value?.chain().focus().toggleCodeBlock().run()
 }
+
+// Encryption toggle
+async function toggleEncryption() {
+  const stored = await hasStoredKey()
+  if (!stored) {
+    MessagePlugin.warning('请先在「加密密钥管理」页面生成并解锁密钥')
+    return
+  }
+  if (!hasSessionKey()) {
+    // Key exists but not unlocked — show unlock dialog instead of toggle
+    showPasswordDialog.value = true
+    passwordDialogMode.value = 'encrypt'
+    passwordDialogResolve = null
+    return
+  }
+  if (noteIsEncrypted.value) {
+    // Already encrypted note - can't disable (would lose data)
+    MessagePlugin.info('此笔记已加密保存，新建笔记时如需关闭加密请取消勾选')
+    return
+  }
+  encryptionEnabled.value = !encryptionEnabled.value
+  if (encryptionEnabled.value) {
+    MessagePlugin.success('已开启加密，保存时将自动加密笔记内容')
+  } else {
+    MessagePlugin.info('已关闭加密')
+  }
+}
+
+function getEncryptionTooltip(): string {
+  if (hasSessionKey()) return encryptionEnabled.value ? '关闭加密' : '开启加密'
+  // Key may exist in storage but not in session
+  return '点击输入密码解锁密钥'
+}
+
+const moreMenuOptions = [
+  { value: 'code', content: '代码块' },
+  { value: 'blockquote', content: '引用' },
+  { value: 'horizontal-rule', content: '分割线' },
+  { value: 'undo', content: '撤销' },
+  { value: 'redo', content: '重做' },
+]
+
+function handleMoreMenuClick(option: Record<string, any>) {
+  const val = option.value
+  if (val === 'code') editor.value?.chain().focus().toggleCodeBlock().run()
+  else if (val === 'blockquote') editor.value?.chain().focus().toggleBlockquote().run()
+  else if (val === 'horizontal-rule') editor.value?.chain().focus().setHorizontalRule().run()
+  else if (val === 'undo') editor.value?.chain().focus().undo().run()
+  else if (val === 'redo') editor.value?.chain().focus().redo().run()
+}
 </script>
 
 <template>
@@ -363,14 +537,26 @@ function toggleCodeBlock() {
       <div class="header-right">
         <span class="save-status" v-if="saving">保存中...</span>
         <span class="save-status" v-else-if="!isNew">已保存</span>
+
+        <!-- Encryption badge/toggle -->
+        <div class="encryption-badge" v-if="noteIsEncrypted" title="此笔记已加密">
+          <t-icon name="lock-on" size="14px" style="color: #00a870" />
+          <span style="color: #00a870; font-size: 12px;">已加密</span>
+        </div>
+        <t-tooltip :content="getEncryptionTooltip()">
+          <t-button size="small" variant="text" @click="toggleEncryption">
+            <t-icon :name="noteIsEncrypted || encryptionEnabled ? 'lock-on' : 'lock-off'" size="16px" />
+          </t-button>
+        </t-tooltip>
+
         <t-button size="small" @click="handleSave" :loading="saving">保存</t-button>
         <t-button
           size="small"
           variant="text"
-          @click="openShareDialog"
+          @click="downloadNote"
           :disabled="isNew"
         >
-          <t-icon name="share" /> 分享
+          <t-icon name="download" /> 下载
         </t-button>
         <t-button
           size="small"
@@ -391,7 +577,7 @@ function toggleCodeBlock() {
       </t-tooltip>
       <t-tooltip :content="isRecording ? '停止语音输入' : '语音输入'">
         <t-button size="small" variant="text" @click="toggleVoiceInput" :disabled="!editor">
-          <t-icon :name="isRecording ? 'stop-circle' : 'mic'" size="16px" />
+          <t-icon :name="isRecording ? 'stop-circle' : 'microphone'" size="16px" />
         </t-button>
       </t-tooltip>
       <t-button size="small" variant="text" @click="insertImage" :disabled="!editor">
@@ -445,22 +631,22 @@ function toggleCodeBlock() {
 
       <t-tooltip content="加粗">
         <t-button size="small" variant="text" @click="toggleBold" :disabled="!editor">
-          <t-icon name="format-bold" size="16px" />
+          <t-icon name="textformat-bold" size="16px" />
         </t-button>
       </t-tooltip>
       <t-tooltip content="斜体">
         <t-button size="small" variant="text" @click="toggleItalic" :disabled="!editor">
-          <t-icon name="format-italic" size="16px" />
+          <t-icon name="textformat-italic" size="16px" />
         </t-button>
       </t-tooltip>
       <t-tooltip content="下划线">
         <t-button size="small" variant="text" @click="editor?.chain().focus().toggleUnderline().run()" :disabled="!editor">
-          <t-icon name="underline" size="16px" />
+          <t-icon name="textformat-underline" size="16px" />
         </t-button>
       </t-tooltip>
       <t-tooltip content="删除线">
         <t-button size="small" variant="text" @click="toggleStrike" :disabled="!editor">
-          <t-icon name="format-strikethrough" size="16px" />
+          <t-icon name="textformat-strikethrough" size="16px" />
         </t-button>
       </t-tooltip>
 
@@ -473,7 +659,7 @@ function toggleCodeBlock() {
       </t-tooltip>
       <t-tooltip content="高亮">
         <t-button size="small" variant="text" @click="pickHighlight" :disabled="!editor">
-          <t-icon name="highlight-1" size="16px" />
+          <t-icon name="highlight" size="16px" />
         </t-button>
       </t-tooltip>
 
@@ -481,12 +667,12 @@ function toggleCodeBlock() {
 
       <t-tooltip content="有序列表">
         <t-button size="small" variant="text" @click="toggleOrderedList" :disabled="!editor">
-          <t-icon name="ordered-list" size="16px" />
+          <t-icon name="order-list" size="16px" />
         </t-button>
       </t-tooltip>
       <t-tooltip content="无序列表">
         <t-button size="small" variant="text" @click="toggleBulletList" :disabled="!editor">
-          <t-icon name="list" size="16px" />
+          <t-icon name="bulletpoint" size="16px" />
         </t-button>
       </t-tooltip>
 
@@ -494,27 +680,33 @@ function toggleCodeBlock() {
 
       <t-tooltip content="左对齐">
         <t-button size="small" variant="text" @click="setAlign('left')" :disabled="!editor">
-          <t-icon name="text-align-left" size="16px" />
+          <t-icon name="format-vertical-align-left" size="16px" />
         </t-button>
       </t-tooltip>
       <t-tooltip content="居中">
         <t-button size="small" variant="text" @click="setAlign('center')" :disabled="!editor">
-          <t-icon name="text-align-center" size="16px" />
+          <t-icon name="format-vertical-align-center" size="16px" />
         </t-button>
       </t-tooltip>
       <t-tooltip content="右对齐">
         <t-button size="small" variant="text" @click="setAlign('right')" :disabled="!editor">
-          <t-icon name="text-align-right" size="16px" />
+          <t-icon name="format-vertical-align-right" size="16px" />
         </t-button>
       </t-tooltip>
 
       <t-divider layout="vertical" style="margin: 0 6px" />
 
-      <t-tooltip content="更多">
-        <t-button size="small" variant="text" @click="toggleCodeBlock" :disabled="!editor">
+      <t-dropdown
+        trigger="click"
+        placement="bottom-right"
+        :options="moreMenuOptions"
+        @click="handleMoreMenuClick"
+        :disabled="!editor"
+      >
+        <t-button size="small" variant="text" :disabled="!editor">
           <t-icon name="more" size="16px" />
         </t-button>
-      </t-tooltip>
+      </t-dropdown>
     </div>
 
     <!-- Editor body -->
@@ -524,60 +716,31 @@ function toggleCodeBlock() {
       </div>
     </div>
 
-    <!-- Share dialog -->
+    <!-- Password unlock dialog (for encryption toggle and download) -->
     <t-dialog
-      v-model:visible="showShareDialog"
-      header="分享笔记"
+      v-model:visible="showPasswordDialog"
+      :header="passwordDialogMode === 'download' ? '下载加密笔记 - 请输入密码' : '开启加密 - 请输入密码'"
       :footer="false"
-      width="480px"
+      width="380px"
+      :close-on-overlay-click="false"
     >
-      <div class="share-dialog-content">
-        <!-- Existing share status -->
-        <div v-if="shareLink" class="share-result">
-          <p class="label">分享链接</p>
-          <div class="link-row">
-            <t-input :model-value="shareLink" readonly />
-            <t-button size="small" @click="copyShareLink">
-              <t-icon name="copy" />
-            </t-button>
-          </div>
-          <t-button
-            size="small"
-            variant="outline"
-            theme="danger"
-            @click="deleteShare"
-            style="margin-top: 12px"
-          >
-            取消分享
-          </t-button>
+      <div class="dialog-form">
+        <div class="form-group">
+          <label>私钥加密密码</label>
+          <p class="form-hint" v-if="passwordDialogMode === 'download'">此笔记已加密，需要解锁密钥后解密下载。</p>
+          <p class="form-hint" v-else>需要先解锁密钥才能开启加密。</p>
+          <t-input
+            v-model="passwordInput"
+            type="password"
+            placeholder="输入生成密钥时设置的密码"
+            autocomplete="current-password"
+            @enter="handlePasswordUnlock"
+          />
         </div>
-
-        <!-- Create new share -->
-        <div v-else class="share-form">
-          <div class="form-group">
-            <label>访问密码（可选）</label>
-            <t-input
-              v-model="sharePassword"
-              type="password"
-              placeholder="留空则无需密码"
-              clearable
-            />
-          </div>
-          <div class="form-group">
-            <label>过期时间（可选）</label>
-            <t-select v-model="shareExpiresDays" placeholder="永不过期" clearable>
-              <t-option :value="1" label="1 天" />
-              <t-option :value="7" label="7 天" />
-              <t-option :value="30" label="30 天" />
-              <t-option :value="90" label="90 天" />
-            </t-select>
-          </div>
-          <t-button
-            block
-            @click="createShare"
-            :loading="shareLoading"
-          >
-            创建分享链接
+        <div class="dialog-actions">
+          <t-button @click="showPasswordDialog = false; passwordInput = ''" variant="text">取消</t-button>
+          <t-button theme="primary" @click="handlePasswordUnlock" :loading="passwordDialogLoading">
+            解锁
           </t-button>
         </div>
       </div>
@@ -684,36 +847,6 @@ function toggleCodeBlock() {
 :deep(.wysiwyg-editor:focus) {
   outline: none;
 }
-
-/* Share dialog */
-.share-dialog-content {
-  padding: 8px 0;
-}
-
-.share-result {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.share-result .label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4e5969;
-  margin: 0;
-}
-
-.link-row {
-  display: flex;
-  gap: 8px;
-}
-
-.share-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -724,5 +857,24 @@ function toggleCodeBlock() {
   font-size: 13px;
   font-weight: 500;
   color: #4e5969;
+}
+
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #86909c;
+  margin: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
 }
 </style>

@@ -16,10 +16,14 @@ const sidebarCollapsed = ref(false)
 const folders = ref<any[]>([])
 const showNewFolder = ref(false)
 const newFolderName = ref('')
+// 缓存标记：首页已加载过文件夹则不重复请求
+let foldersLoaded = false
 
 const navItems = [
   { name: 'notes', label: '笔记', icon: 'file-copy' },
   { name: 'folders', label: '文件夹', icon: 'folder' },
+  { name: 'keys', label: '加密密钥', icon: 'lock-on' },
+  { name: 'photos', label: '照片', icon: 'image' },
   { name: 'ai-chat', label: 'AI 对话', icon: 'chat' },
   { name: 'search', label: '搜索', icon: 'search' },
 ]
@@ -29,10 +33,12 @@ onMounted(async () => {
 })
 
 async function loadFolders() {
+  if (foldersLoaded && folders.value.length > 0) return // 已有缓存，跳过请求
   try {
     const res = await listFolders()
     const d = res.data?.data || res.data || {}
     folders.value = d.items || []
+    foldersLoaded = true
   } catch {
     // ignore
   }
@@ -224,7 +230,13 @@ function handleLogout() {
         </div>
       </header>
       <div class="content-body">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <keep-alive :include="['NoteListView','SearchView','FoldersView','AIChatView','ProfileView']">
+              <component :is="Component" />
+            </keep-alive>
+          </transition>
+        </router-view>
       </div>
     </main>
 

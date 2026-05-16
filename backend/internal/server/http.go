@@ -22,6 +22,8 @@ import (
 	"github.com/krasis/krasis/internal/config"
 	"github.com/krasis/krasis/internal/file"
 	folderpkg "github.com/krasis/krasis/internal/folder"
+	"github.com/krasis/krasis/internal/keys"
+	"github.com/minio/minio-go/v7"
 	"github.com/krasis/krasis/internal/group"
 	"github.com/krasis/krasis/internal/middleware"
 	"github.com/krasis/krasis/internal/note"
@@ -110,18 +112,43 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 	authHandler := auth.NewHandler(oauthManager, jwtManager, sessionManager, userService, sysConfigRepo, cfg.JWT.Expiration)
 	userHandler := user.NewHandler(userService, sessionManager)
 
+	// Keys module
+	keysRepo := keys.NewRepository(pool)
+	keysHandler := keys.NewHandler(keysRepo)
+
 	// Folder module
 	folderRepo := folderpkg.NewRepository(pool)
 	folderService := folderpkg.NewService(folderRepo)
 	folderHandler := folderpkg.NewHandler(folderService)
 
 	// File module
-	minioClient, _ := file.NewMinioClient(
+	minioClient, err := file.NewMinioClient(
 		cfg.Storage.MinIO.Endpoint,
 		cfg.Storage.MinIO.AccessKey,
 		cfg.Storage.MinIO.SecretKey,
 		cfg.Storage.MinIO.UseSSL,
 	)
+	if err != nil {
+		logger.Fatal("failed to create MinIO client", zap.Error(err))
+	}
+
+	if minioClient != nil {
+		// Ensure bucket exists
+		ctx := context.Background()
+		bucket := cfg.Storage.MinIO.Bucket
+		exists, err := minioClient.BucketExists(ctx, bucket)
+		if err != nil {
+			logger.Fatal("failed to check MinIO bucket", zap.Error(err))
+		}
+		if !exists {
+			if err := minioClient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
+				logger.Fatal("failed to create MinIO bucket", zap.Error(err))
+			}
+			logger.Info("created MinIO bucket", zap.String("bucket", bucket))
+		}
+	} else {
+		logger.Warn("MinIO not configured, file storage features will be unavailable")
+	}
 	fileRepo := file.NewRepository(pool)
 	fileService := file.NewService(fileRepo, minioClient, cfg.Storage.MinIO.Bucket, 15*time.Minute)
 	fileHandler := file.NewHandler(fileService)
@@ -135,12 +162,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 	// Start hot reloader (30s interval)
 	modelManager.StartReloader(context.Background(), 30*time.Second, logger)
 
-	qdrantClient := vector.NewQdrantClient(
-		cfg.Storage.AI.Qdrant.Endpoint,
-		cfg.Storage.AI.Qdrant.APIKey,
-		cfg.Storage.AI.Qdrant.Collection,
-	)
-
 	// Search module (needed for hybrid RAG retrieval)
 	searchRepo := search.NewSearchRepository(pool)
 	searchService := search.NewService(searchRepo)
@@ -149,7 +170,16 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 	// Keyword search adapter for hybrid RAG retrieval
 	keywordSearcher := &keywordSearchAdapter{repo: searchRepo}
 
-	aiService := ai.NewAIService(aiRepo, modelManager, qdrantClient, keywordSearcher)
+	// PGVectorStore for vector embeddings (replaces Qdrant)
+	var vectorStore ai.VectorStore
+	embeddingModel := modelManager.GetDefaultEmbedding()
+	dimension := 1536
+	if embeddingModel != nil && embeddingModel.Dimensions > 0 {
+		dimension = embeddingModel.Dimensions
+	}
+	vectorStore = vector.NewPGVectorStore(pool, dimension)
+
+	aiService := ai.NewAIService(aiRepo, modelManager, vectorStore, keywordSearcher)
 	aiHandler := ai.NewHandler(aiService, logger)
 
 	// Note module (with AI indexer for RAG sync)
@@ -221,6 +251,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 		authGroup.GET("/google/callback", authHandler.GoogleCallback)
 		authGroup.POST("/logout", authMiddleware, authHandler.Logout)
 		authGroup.GET("/me", authMiddleware, userHandler.GetMe)
+		authGroup.POST("/verify-password", authMiddleware, authHandler.VerifyPassword)
 	}
 
 	// User routes (authenticated)
@@ -286,7 +317,25 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 	{
 		fileGroup.GET("/presign", fileHandler.GetPresignURL)
 		fileGroup.POST("/confirm", fileHandler.ConfirmUpload)
+		fileGroup.GET("/folder/:folder_id", fileHandler.ListByFolder)
+		fileGroup.GET("/folder/:folder_id/hidden", fileHandler.ListHiddenByFolder)
+		fileGroup.GET("/images", fileHandler.ListImages)
+		fileGroup.GET("/:id/url", fileHandler.GetFileURL)
+		fileGroup.GET("/:id/download", fileHandler.DownloadFile)
+		fileGroup.POST("/:id/hide", fileHandler.MarkHidden)
+		fileGroup.POST("/:id/unhide", fileHandler.UnhideFile)
 		fileGroup.DELETE("/:id", fileHandler.DeleteFile)
+	}
+
+	// Keys routes (authenticated) — sync encrypted key package to server
+	keysGroup := engine.Group("/keys")
+	keysGroup.Use(authMiddleware)
+	{
+		keysGroup.GET("", keysHandler.GetKey)
+		keysGroup.PUT("", keysHandler.UpsertKey)
+		keysGroup.DELETE("", keysHandler.DeleteKey)
+		keysGroup.GET("/qr", keysHandler.GetQRPackage)
+		keysGroup.GET("/:user_id/public", keysHandler.GetPublicKey)
 	}
 
 	// WebSocket collaboration route (authenticated via query param)

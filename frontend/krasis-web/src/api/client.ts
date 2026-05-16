@@ -30,8 +30,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
       if (!window.location.pathname.startsWith('/login') &&
-          !window.location.pathname.startsWith('/register') &&
-          !window.location.pathname.startsWith('/share/')) {
+          !window.location.pathname.startsWith('/register')) {
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
       }
     }

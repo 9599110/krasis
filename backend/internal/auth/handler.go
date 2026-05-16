@@ -295,3 +295,45 @@ func (h *Handler) Logout(c *gin.Context) {
 
 	response.Success(c, nil)
 }
+
+// VerifyPassword checks the user's login password (requires authentication).
+// Used for sensitive operations like revealing hidden encrypted files.
+func (h *Handler) VerifyPassword(c *gin.Context) {
+	userIDStr := c.GetString("user_id")
+	if userIDStr == "" {
+		response.Error(c, 401, response.ErrUnauthorized, "未认证")
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		response.Error(c, 400, response.ErrBadRequest, "无效的用户 ID")
+		return
+	}
+
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Password == "" {
+		response.Error(c, 400, response.ErrBadRequest, "请输入密码")
+		return
+	}
+
+	ok, err := h.userService.VerifyPassword(c, userID, req.Password)
+	if err != nil {
+		if err.Error() == "no local password set — user may use OAuth only" {
+			// OAuth user has no local password — always "verified" for hidden files toggle
+			response.Success(c, gin.H{"verified": true})
+			return
+		}
+		response.Error(c, 500, response.ErrInternalServerError, err.Error())
+		return
+	}
+
+	if !ok {
+		response.Error(c, 401, response.ErrUnauthorized, "密码错误")
+		return
+	}
+
+	response.Success(c, gin.H{"verified": true})
+}

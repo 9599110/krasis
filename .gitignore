@@ -78,3 +78,17 @@ sdk/python/krasis_sdk.egg-info/
 
 # Docker
 docker/postgres/pg_hba.conf
+# Claw Code local artifacts
+.crabcoder/settings.local.json
+.crabcoder/sessions/
+.clawhip/
+
+# Claw/Claude AI tool artifacts
+.claw/
+.claw-todos.json
+.clawd-todos.json
+.claude/
+.sandbox-home/
+.sandbox-tmp/
+CLAUDE.md
+crab.json

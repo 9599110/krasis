@@ -270,9 +270,8 @@ func (s *AIService) GetModelManager() *ModelConfigManager {
 // DeleteNoteIndex removes a note's embeddings from the vector store
 func (s *AIService) DeleteNoteIndex(ctx context.Context, noteID string) error {
 	if s.vectorStore != nil {
-		s.vectorStore.DeleteByNote(ctx, noteID)
+		return s.vectorStore.DeleteByNote(ctx, noteID)
 	}
-	s.repo.DeleteEmbeddingsByNote(ctx, uuid.MustParse(noteID))
 	return nil
 }
 
@@ -309,17 +308,11 @@ func (s *AIService) IndexNote(ctx context.Context, noteID, title, content, userI
 		vectors[i] = vec
 	}
 
-	// Store in vector DB
+	// Store in vector DB (PGVectorStore saves directly to note_embeddings table)
 	if s.vectorStore != nil {
 		if err := s.vectorStore.Upsert(ctx, noteID, chunks, vectors); err != nil {
 			return err
 		}
-	}
-
-	// Save embedding references
-	for i, chunk := range chunks {
-		vectorID := fmt.Sprintf("%s_%d", noteID, i)
-		s.repo.SaveEmbedding(ctx, uuid.MustParse(noteID), i, chunk.Text, vectorID, chunk.TokenCount)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/search_provider.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -94,10 +95,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     color: theme.colorScheme.primary,
                   ),
                 ),
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  '/note/${result.id}',
-                ),
+                onTap: () => context.push('/notes/note/${result.id}'),
               );
             },
           );

@@ -21,9 +21,6 @@ const actionOptions = [
   { value: 'user.create', label: '创建用户' },
   { value: 'user.update', label: '更新用户' },
   { value: 'user.delete', label: '删除用户' },
-  { value: 'share.approve', label: '通过分享' },
-  { value: 'share.reject', label: '拒绝分享' },
-  { value: 'share.revoke', label: '撤回分享' },
   { value: 'config.update', label: '修改配置' },
   { value: 'group.create', label: '创建用户组' },
   { value: 'group.update', label: '更新用户组' },
@@ -33,7 +30,6 @@ const actionOptions = [
 const targetOptions = [
   { value: '', label: '全部' },
   { value: 'user', label: '用户' },
-  { value: 'share', label: '分享' },
   { value: 'config', label: '配置' },
   { value: 'group', label: '用户组' },
 ]
@@ -82,7 +78,6 @@ function actionTagTheme(action: string) {
   const prefix = action?.split('.')[0] || ''
   const map: Record<string, string> = {
     user: 'primary',
-    share: 'warning',
     config: 'success',
     group: 'default',
     ai_model: 'info',

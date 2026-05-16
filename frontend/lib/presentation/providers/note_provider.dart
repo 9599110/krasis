@@ -13,23 +13,26 @@ final noteListProvider = StateNotifierProvider<NoteListNotifier, AsyncValue<List
 class NoteListNotifier extends StateNotifier<AsyncValue<List<NoteModel>>> {
   final ApiClient _api;
   String? _currentFolderId;
+  bool _hideEncrypted = false;
   bool _initialized = false;
 
   NoteListNotifier(this._api) : super(const AsyncValue.loading());
 
-  Future<void> loadNotes({String? folderId}) async {
-    if (_initialized && _currentFolderId == folderId) return;
+  Future<void> loadNotes({String? folderId, bool hideEncrypted = false}) async {
+    if (_initialized && _currentFolderId == folderId && _hideEncrypted == hideEncrypted) return;
     _initialized = true;
     _currentFolderId = folderId;
+    _hideEncrypted = hideEncrypted;
     state = const AsyncValue.loading();
     try {
       // ignore: avoid_print
-      print('[notes] loadNotes start folderId=$folderId');
+      print('[notes] loadNotes start folderId=$folderId hideEncrypted=$hideEncrypted');
       final response = await _api
           .get('/notes', queryParameters: {
             'page': 1,
             'size': 50,
             if (folderId != null) 'folder_id': folderId,
+            if (hideEncrypted) 'hide_encrypted': 'true',
           })
           .timeout(const Duration(seconds: 12));
       final data = response.data!['data'] as Map<String, dynamic>;
@@ -60,7 +63,7 @@ class NoteEditorNotifier extends StateNotifier<AsyncValue<NoteModel?>> {
   final String noteId;
 
   NoteEditorNotifier(this._api, this.noteId) : super(const AsyncValue.loading()) {
-    if (noteId != 'new') load();
+    if (noteId != 'new') Future.microtask(load);
   }
 
   Future<NoteModel?> load() async {
@@ -77,11 +80,12 @@ class NoteEditorNotifier extends StateNotifier<AsyncValue<NoteModel?>> {
     }
   }
 
-  Future<NoteModel> createNote({required String title, String content = '', String? folderId}) async {
+  Future<NoteModel> createNote({required String title, String content = '', String? folderId, bool isEncrypted = false}) async {
     final response = await _api.post('/notes', data: {
       'title': title,
       'content': content,
       if (folderId != null) 'folder_id': folderId,
+      'is_encrypted': isEncrypted,
     });
     final data = response.data!['data'] as Map<String, dynamic>;
     return NoteModel.fromJson(data);
@@ -92,6 +96,7 @@ class NoteEditorNotifier extends StateNotifier<AsyncValue<NoteModel?>> {
     required String content,
     required int version,
     String? changeSummary,
+    bool isEncrypted = false,
   }) async {
     try {
       final response = await _api.put(
@@ -100,6 +105,7 @@ class NoteEditorNotifier extends StateNotifier<AsyncValue<NoteModel?>> {
           'title': title,
           'content': content,
           'version': version,
+          'is_encrypted': isEncrypted,
           if (changeSummary != null) 'change_summary': changeSummary,
         },
         headers: {'If-Match': version.toString()},
@@ -127,7 +133,7 @@ class FolderListNotifier extends StateNotifier<AsyncValue<List<FolderModel>>> {
   final ApiClient _api;
 
   FolderListNotifier(this._api) : super(const AsyncValue.loading()) {
-    loadFolders();
+    Future.microtask(loadFolders);
   }
 
   Future<void> loadFolders() async {

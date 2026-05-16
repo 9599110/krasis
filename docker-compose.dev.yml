@@ -14,15 +14,15 @@ services:
       - listen_addresses=*
     environment:
       POSTGRES_DB: krasis
-      POSTGRES_USER: krasis
-      POSTGRES_PASSWORD: krasis123
+      POSTGRES_USER: kaixin
+      POSTGRES_PASSWORD: kaixin100
     ports:
       - "5432:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
       - ./docker/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U krasis"]
+      test: ["CMD-SHELL", "pg_isready -U kaixin"]
       interval: 5s
       timeout: 3s
       retries: 5

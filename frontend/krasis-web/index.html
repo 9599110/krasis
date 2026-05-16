@@ -1,13 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>krasis-web</title>
+    <title>Krasis - 智能笔记系统</title>
+    <meta name="description" content="Krasis 智能笔记系统" />
+    <!-- DNS 预解析加速后端请求 -->
+    <link rel="dns-prefetch" href="//localhost:18081" />
+    <link rel="preconnect" href="//localhost:18081" />
+    <style>
+      /* 首屏加载防止闪烁 */
+      #app { min-height: 100vh; }
+      .splash-loading {
+        display: flex; align-items: center; justify-content: center;
+        height: 100vh; font-size: 16px; color: #86909c;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="splash-loading">加载中...</div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

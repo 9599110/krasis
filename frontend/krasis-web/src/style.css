@@ -52,6 +52,9 @@
 
 body {
   margin: 0;
+  /* 滚动性能优化 */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Admin full-width override */
@@ -60,6 +63,28 @@ body.admin-mode #app {
   max-width: 100% !important;
   border: none !important;
   text-align: left !important;
+}
+
+/* 页面级滚动容器性能优化 */
+.content-body {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* 提升活动元素渲染性能 */
+.note-card,
+.folder-card,
+.nav-item,
+.folder-item {
+  contain: layout style;
+}
+
+/* 动画性能优化 */
+.sidebar,
+.main-header,
+.note-card,
+.folder-card {
+  will-change: auto;
 }
 
 h1,

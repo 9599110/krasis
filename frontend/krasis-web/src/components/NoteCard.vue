@@ -13,7 +13,6 @@ const emit = defineEmits<{
   (e: 'edit', id: string): void
   (e: 'delete', id: string): void
   (e: 'versions', id: string): void
-  (e: 'share', id: string): void
 }>()
 
 const preview = computed(() => {
@@ -38,7 +37,6 @@ const dateStr = computed(() => {
 function onEdit() { emit('edit', props.id) }
 function onDelete() { emit('delete', props.id) }
 function onVersions() { emit('versions', props.id) }
-function onShare() { emit('share', props.id) }
 </script>
 
 <template>
@@ -54,9 +52,6 @@ function onShare() { emit('share', props.id) }
     <div class="note-actions">
       <button class="action-btn" title="Versions" @click.stop="onVersions">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-      </button>
-      <button class="action-btn" title="Share" @click.stop="onShare">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       </button>
       <button class="action-btn action-btn--danger" title="Delete" @click.stop="onDelete">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>

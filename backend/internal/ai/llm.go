@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -162,7 +163,13 @@ func (l *OpenAILLM) GenerateStream(ctx context.Context, messages []MessageParam,
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("OpenAI API request failed: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("OpenAI API returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	ch := make(chan string)
@@ -283,7 +290,13 @@ func (l *OllamaLLM) GenerateStream(ctx context.Context, messages []MessageParam,
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Ollama API request failed: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("Ollama API returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	ch := make(chan string)
@@ -392,7 +405,13 @@ func (l *AzureLLM) GenerateStream(ctx context.Context, messages []MessageParam, 
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Azure API request failed: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("Azure API returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	ch := make(chan string)
@@ -545,7 +564,13 @@ func (l *AnthropicLLM) GenerateStream(ctx context.Context, messages []MessagePar
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Anthropic API request failed: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("Anthropic API returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	ch := make(chan string)

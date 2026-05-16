@@ -41,7 +41,7 @@ async function send() {
     (token: string) => {
       fullAnswer += token
       messages.value[aiIdx].content = fullAnswer
-      scrollToBottom()
+      scrollToBottomThrottled()
     },
     () => {
       loading.value = false
@@ -60,6 +60,18 @@ function scrollToBottom() {
       chatRef.value.scrollTop = chatRef.value.scrollHeight
     }
   })
+}
+
+// 节流版 scrollToBottom，避免流式渲染时大量回流
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
+function scrollToBottomThrottled() {
+  if (scrollTimer) return
+  scrollTimer = setTimeout(() => {
+    scrollTimer = null
+    if (chatRef.value) {
+      chatRef.value.scrollTop = chatRef.value.scrollHeight
+    }
+  }, 50)
 }
 
 function clearChat() {

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart' show Response;
 import 'config/app_config.dart';
 import 'config/theme.dart';
 import 'presentation/providers/auth_provider.dart';
@@ -10,19 +13,21 @@ import 'presentation/screens/auth/splash_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/note/note_editor_screen.dart';
 import 'presentation/screens/note/version_history/version_history_screen.dart';
-import 'presentation/screens/note/share/share_screen.dart';
 import 'presentation/screens/search/search_screen.dart';
 import 'presentation/screens/ai/ai_chat_screen.dart';
 import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/settings/settings_screen.dart';
 import 'presentation/screens/devices/devices_screen.dart';
+import 'presentation/screens/keys/key_manage_screen.dart';
+import 'presentation/screens/photos/photos_screen.dart';
 import 'presentation/widgets/ai_floating_dialog.dart';
+import 'core/crypto/key_store.dart' as key_store;
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final router = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/login',
+  initialLocation: '/splash',
   routes: [
     GoRoute(
       path: '/splash',
@@ -61,13 +66,6 @@ final router = GoRouter(
                     return VersionHistoryScreen(noteId: noteId);
                   },
                 ),
-                GoRoute(
-                  path: 'share',
-                  builder: (context, state) {
-                    final noteId = state.pathParameters['noteId']!;
-                    return ShareScreen(noteId: noteId);
-                  },
-                ),
               ],
             ),
           ],
@@ -92,6 +90,14 @@ final router = GoRouter(
           path: '/devices',
           builder: (context, state) => const DevicesScreen(),
         ),
+        GoRoute(
+          path: '/keys',
+          builder: (context, state) => const KeyManageScreen(),
+        ),
+        GoRoute(
+          path: '/photos',
+          builder: (context, state) => const PhotosScreen(),
+        ),
       ],
     ),
   ],
@@ -113,6 +119,13 @@ class KrasisApp extends ConsumerWidget {
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: router,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('zh'), Locale('en')],
     );
   }
 }
@@ -128,9 +141,54 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   bool _sidebarCollapsed = false;
   bool _aiDialogVisible = false;
+  bool _keySyncInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize key sync and try to auto-sync keys after auth.
+    _initKeySync();
+  }
+
+  void _initKeySync() {
+    // Set up the API caller for key_store so it can sync keys via the server.
+    key_store.setSyncApiCaller((String method, String path,
+        {Map<String, dynamic>? data}) async {
+      final api = ref.read(apiClientProvider);
+      Response<Map<String, dynamic>> response;
+      switch (method) {
+        case 'GET':
+          response = await api.get(path);
+          break;
+        case 'PUT':
+          response = await api.put(path, data: data);
+          break;
+        case 'DELETE':
+          response = await api.delete(path);
+          break;
+        default:
+          throw UnsupportedError('Unsupported method: $method');
+      }
+      return response.data ?? {};
+    });
+  }
+
+  Future<void> _tryAutoSyncKeys() async {
+    if (_keySyncInitialized) return;
+    _keySyncInitialized = true;
+    await key_store.autoSyncKeys();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Trigger key sync once when the user is authenticated
+    final authState = ref.watch(authProvider);
+    if (authState.isAuthenticated && !_keySyncInitialized) {
+      // Use post-frame callback to avoid build-side effects
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _tryAutoSyncKeys();
+      });
+    }
     final width = MediaQuery.of(context).size.width;
     final isMobile = width < 768;
     final isTablet = width >= 768 && width < 1024;
@@ -148,6 +206,7 @@ class _MainShellState extends ConsumerState<MainShell> {
       bottomNavigationBar: NavigationBar(
         destinations: const [
           NavigationDestination(icon: Icon(Icons.note_outlined), selectedIcon: Icon(Icons.note), label: '笔记'),
+          NavigationDestination(icon: Icon(Icons.photo_library_outlined), selectedIcon: Icon(Icons.photo_library), label: '照片'),
           NavigationDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: 'AI'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: '我的'),
         ],
@@ -288,6 +347,14 @@ class _MainShellState extends ConsumerState<MainShell> {
                 selected: currentLocation.startsWith('/search'),
                 onTap: () => context.go('/search'),
               ),
+              _SidebarTile(
+                icon: Icons.photo_library_outlined,
+                activeIcon: Icons.photo_library,
+                label: '照片',
+                collapsed: _sidebarCollapsed,
+                selected: currentLocation.startsWith('/photos'),
+                onTap: () => context.go('/photos'),
+              ),
               const Divider(),
               _SidebarTile(
                 icon: Icons.person_outline,
@@ -325,8 +392,9 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith('/ai')) return 1;
-    if (location.startsWith('/profile')) return 2;
+    if (location.startsWith('/photos')) return 1;
+    if (location.startsWith('/ai')) return 2;
+    if (location.startsWith('/profile')) return 3;
     return 0;
   }
 
@@ -336,9 +404,12 @@ class _MainShellState extends ConsumerState<MainShell> {
         context.go('/notes');
         break;
       case 1:
-        context.go('/ai');
+        context.go('/photos');
         break;
       case 2:
+        context.go('/ai');
+        break;
+      case 3:
         context.go('/profile');
         break;
     }

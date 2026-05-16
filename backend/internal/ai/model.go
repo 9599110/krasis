@@ -273,7 +273,7 @@ func (r *Repository) GetConversation(ctx context.Context, id, userID uuid.UUID) 
 
 func (r *Repository) CreateMessage(ctx context.Context, msg *Message) error {
 	return r.pool.QueryRow(ctx, `
-		INSERT INTO ai_messages (conversation_id, role, content, "references", token_count, model)
+		INSERT INTO ai_messages (conversation_id, role, content, refs, token_count, model)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at
 	`, msg.ConversationID, msg.Role, msg.Content, msg.References, msg.TokenCount, msg.Model,
@@ -292,7 +292,7 @@ func (r *Repository) ListMessages(ctx context.Context, conversationID, userID uu
 	}
 
 	rows, err := r.pool.Query(ctx,
-		"SELECT id, conversation_id, role, content, \"references\", token_count, model, created_at FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at",
+		"SELECT id, conversation_id, role, content, refs, token_count, model, created_at FROM ai_messages WHERE conversation_id = $1 ORDER BY created_at",
 		conversationID,
 	)
 	if err != nil {
@@ -309,36 +309,6 @@ func (r *Repository) ListMessages(ctx context.Context, conversationID, userID uu
 		messages = append(messages, &m)
 	}
 	return messages, nil
-}
-
-func (r *Repository) SaveEmbedding(ctx context.Context, noteID uuid.UUID, chunkIndex int, chunkText, vectorID string, tokenCount int) error {
-	_, err := r.pool.Exec(ctx, `
-		INSERT INTO note_embeddings (note_id, chunk_index, chunk_text, vector_id, token_count)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (note_id, chunk_index) DO UPDATE SET chunk_text = $3, vector_id = $4, token_count = $5, updated_at = NOW()
-	`, noteID, chunkIndex, chunkText, vectorID, tokenCount)
-	return err
-}
-
-func (r *Repository) DeleteEmbeddingsByNote(ctx context.Context, noteID uuid.UUID) error {
-	_, err := r.pool.Exec(ctx, "DELETE FROM note_embeddings WHERE note_id = $1", noteID)
-	return err
-}
-
-func (r *Repository) GetEmbeddingIDsByNote(ctx context.Context, noteID uuid.UUID) ([]string, error) {
-	rows, err := r.pool.Query(ctx, "SELECT vector_id FROM note_embeddings WHERE note_id = $1", noteID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ids []string
-	for rows.Next() {
-		var id string
-		rows.Scan(&id)
-		ids = append(ids, id)
-	}
-	return ids, nil
 }
 
 func (r *Repository) UpdateConfigValue(ctx context.Context, key string, value []byte) error {

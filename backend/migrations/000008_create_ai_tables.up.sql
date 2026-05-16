@@ -24,13 +24,13 @@ CREATE TABLE ai_messages (
 
 CREATE INDEX idx_ai_msg_conv ON ai_messages(conversation_id);
 
--- Note embeddings tracking (actual vectors stored in Qdrant)
+-- Note embeddings tracking (vectors stored in PostgreSQL via pgvector)
 CREATE TABLE note_embeddings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     note_id UUID NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
     chunk_index INT NOT NULL,
     chunk_text TEXT NOT NULL,
-    vector_id VARCHAR(255),              -- Qdrant point ID
+    embedding vector(1536),                -- pgvector column (1536 for OpenAI ada-002)
     token_count INT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ,

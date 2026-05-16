@@ -52,6 +52,8 @@ export interface Note {
   folder_id: string | null
   user_id: string
   version: number
+  is_public: boolean
+  is_encrypted: boolean
   created_at: string
   updated_at: string
 }
@@ -60,12 +62,14 @@ export interface CreateNoteRequest {
   title: string
   content?: string
   folder_id?: string | null
+  is_encrypted?: boolean
 }
 
 export interface UpdateNoteRequest {
   title?: string
   content?: string
   folder_id?: string | null
+  is_encrypted?: boolean
 }
 
 // Note Version
@@ -92,33 +96,6 @@ export interface Folder {
 export interface CreateFolderRequest {
   name: string
   parent_id?: string | null
-}
-
-// Share
-export const ShareStatus = {
-  Active: 'active',
-  Expired: 'expired',
-  Revoked: 'revoked',
-} as const
-
-export type ShareStatus = (typeof ShareStatus)[keyof typeof ShareStatus]
-
-export interface ShareLink {
-  id: string
-  note_id: string
-  token: string
-  status: ShareStatus
-  expires_at: string | null
-  created_at: string
-}
-
-export interface CreateShareRequest {
-  expires_at?: string | null
-}
-
-export interface SharedNote {
-  note: Note
-  shared_at: string
 }
 
 // Search

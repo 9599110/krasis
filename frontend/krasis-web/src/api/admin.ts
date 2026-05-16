@@ -16,17 +16,6 @@ export const updateUserStatus = (id: string, status: number) => apiClient.put(`/
 export const batchDisableUsers = (userIds: string[]) => apiClient.post('/admin/users/batch/disable', { user_ids: userIds })
 export const exportUsers = () => apiClient.post('/admin/users/export', { responseType: 'blob' })
 
-// --- Share Review ---
-export const getPendingShares = (params: Record<string, any>) => apiClient.get('/admin/shares/pending', { params })
-export const getShareDetail = (id: string) => apiClient.get(`/admin/shares/${id}`)
-export const approveShare = (id: string) => apiClient.post(`/admin/shares/${id}/approve`, {})
-export const rejectShare = (id: string, reason: string) => apiClient.post(`/admin/shares/${id}/reject`, { reason })
-export const reReviewShare = (id: string) => apiClient.post(`/admin/shares/${id}/re-review`, {})
-export const revokeShare = (id: string) => apiClient.delete(`/admin/shares/${id}/revoke`)
-export const batchReview = (shareIds: string[], action: string, reason?: string) =>
-  apiClient.post('/admin/shares/batch/review', { share_ids: shareIds, action, reason })
-export const getShareStats = () => apiClient.get('/admin/shares/stats')
-
 // --- AI Models ---
 export const listModels = (params?: Record<string, any>) => apiClient.get('/admin/ai/models', { params })
 export const createModel = (data: Record<string, any>) => apiClient.post('/admin/ai/models', data)

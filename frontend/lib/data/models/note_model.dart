@@ -6,8 +6,7 @@ class NoteModel {
   final String ownerId;
   final String? folderId;
   final int version;
-  final bool isPublic;
-  final String? shareToken;
+  final bool isEncrypted;
   final int viewCount;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -20,8 +19,7 @@ class NoteModel {
     required this.ownerId,
     this.folderId,
     this.version = 0,
-    this.isPublic = false,
-    this.shareToken,
+    this.isEncrypted = false,
     this.viewCount = 0,
     required this.createdAt,
     required this.updatedAt,
@@ -54,8 +52,7 @@ class NoteModel {
       ownerId: ownerId,
       folderId: folderId,
       version: json['version'] as int? ?? 0,
-      isPublic: json['is_public'] as bool? ?? false,
-      shareToken: json['share_token'] as String?,
+      isEncrypted: json['is_encrypted'] as bool? ?? false,
       viewCount: json['view_count'] as int? ?? 0,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -67,7 +64,7 @@ class NoteModel {
         'content': content,
         if (folderId != null) 'folder_id': folderId,
         'version': version,
-        'is_public': isPublic,
+        'is_encrypted': isEncrypted,
       };
 
   NoteModel copyWith({
@@ -75,8 +72,7 @@ class NoteModel {
     String? content,
     String? folderId,
     int? version,
-    bool? isPublic,
-    String? shareToken,
+    bool? isEncrypted,
   }) {
     return NoteModel(
       id: id,
@@ -86,8 +82,7 @@ class NoteModel {
       ownerId: ownerId,
       folderId: folderId ?? this.folderId,
       version: version ?? this.version,
-      isPublic: isPublic ?? this.isPublic,
-      shareToken: shareToken ?? this.shareToken,
+      isEncrypted: isEncrypted ?? this.isEncrypted,
       viewCount: viewCount,
       createdAt: createdAt,
       updatedAt: updatedAt,

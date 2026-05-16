@@ -18,7 +18,7 @@ async function handleSearch() {
   try {
     const res = await apiClient.get('/search', { params: { q: keyword.value } })
     const d = res.data?.data || res.data || {}
-    results.value = d.results || []
+    results.value = d.items || []
   } catch {
     MessagePlugin.error('搜索失败')
   } finally {
@@ -68,7 +68,10 @@ function formatDate(dateStr: string) {
       </div>
       <div v-for="item in results" :key="item.id" class="result-item" @click="openNote(item.id)">
         <div class="result-title" v-html="highlightText(item.title)"></div>
-        <div class="result-content" v-html="highlightText(item.content?.substring(0, 200) || '')"></div>
+        <div class="result-content" v-if="item.highlights && item.highlights.length > 0">
+          <div v-for="(hl, idx) in item.highlights.slice(0, 2)" :key="idx" v-html="hl"></div>
+        </div>
+        <div class="result-content" v-else v-html="highlightText(item.title)"></div>
         <div class="result-meta">
           <span>{{ formatDate(item.updated_at) }}</span>
           <span v-if="item.score" class="score">相关度: {{ (item.score * 100).toFixed(0) }}%</span>

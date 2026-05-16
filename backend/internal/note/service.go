@@ -16,10 +16,11 @@ type NoteIndexer interface {
 
 // NoteRepositoryInterface abstracts the database layer for testing.
 type NoteRepositoryInterface interface {
-	Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error)
+	Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID, isEncrypted bool) (*Note, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Note, error)
-	ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error)
+	ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string, hideEncrypted bool) ([]*Note, int64, error)
 	UpdateWithOptimisticLock(ctx context.Context, id uuid.UUID, title, content string, version int) (*Note, error)
+	SetEncrypted(ctx context.Context, id uuid.UUID, isEncrypted bool) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	PermanentDelete(ctx context.Context, id uuid.UUID) error
 	SaveVersion(ctx context.Context, noteID, changedBy uuid.UUID, title, content string, version int, summary string) error
@@ -40,24 +41,24 @@ func NewNoteService(repo NoteRepositoryInterface, indexer NoteIndexer) *NoteServ
 	return &NoteService{repo: repo, indexer: indexer}
 }
 
-func (s *NoteService) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error) {
+func (s *NoteService) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID, isEncrypted bool) (*Note, error) {
 	if strings.TrimSpace(title) == "" {
 		title = "Untitled"
 	}
 
-	note, err := s.repo.Create(ctx, ownerID, title, content, folderID)
+	note, err := s.repo.Create(ctx, ownerID, title, content, folderID, isEncrypted)
 	if err != nil {
 		return nil, err
 	}
 
-	// Save initial version
-	if err := s.repo.SaveVersion(ctx, note.ID, ownerID, note.Title, note.Content, 1, "创建笔记"); err != nil {
-		return note, fmt.Errorf("save version: %w", err)
+	// Skip RAG indexing for encrypted notes (content is not plaintext)
+	if s.indexer != nil && !isEncrypted {
+		go s.indexer.IndexNote(context.Background(), note.ID.String(), note.Title, note.Content, ownerID.String())
 	}
 
-	// Index for RAG search (async)
-	if s.indexer != nil {
-		go s.indexer.IndexNote(context.Background(), note.ID.String(), note.Title, note.Content, ownerID.String())
+	// Save initial version (always save version, content may be encrypted)
+	if err := s.repo.SaveVersion(ctx, note.ID, ownerID, note.Title, note.Content, 1, "创建笔记"); err != nil {
+		return note, fmt.Errorf("save version: %w", err)
 	}
 
 	return note, nil
@@ -77,17 +78,17 @@ func (s *NoteService) GetByID(ctx context.Context, userID, noteID uuid.UUID) (*N
 	return note, nil
 }
 
-func (s *NoteService) List(ctx context.Context, userID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error) {
+func (s *NoteService) List(ctx context.Context, userID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string, hideEncrypted bool) ([]*Note, int64, error) {
 	if page < 1 {
 		page = 1
 	}
 	if size < 1 || size > 100 {
 		size = 20
 	}
-	return s.repo.ListByOwner(ctx, userID, folderID, page, size, sort, order)
+	return s.repo.ListByOwner(ctx, userID, folderID, page, size, sort, order, hideEncrypted)
 }
 
-func (s *NoteService) Update(ctx context.Context, userID, noteID uuid.UUID, title, content string, version int) (*Note, error) {
+func (s *NoteService) Update(ctx context.Context, userID, noteID uuid.UUID, title, content string, version int, isEncrypted *bool) (*Note, error) {
 	note, err := s.repo.GetByID(ctx, noteID)
 	if err != nil {
 		return nil, err
@@ -97,6 +98,14 @@ func (s *NoteService) Update(ctx context.Context, userID, noteID uuid.UUID, titl
 	}
 	if note.IsDeleted {
 		return nil, ErrNoteDeleted
+	}
+
+	// Update is_encrypted if explicitly provided (pointer = nil means unchanged)
+	if isEncrypted != nil {
+		if err := s.repo.SetEncrypted(ctx, noteID, *isEncrypted); err != nil {
+			return nil, fmt.Errorf("update encrypted status: %w", err)
+		}
+		note.IsEncrypted = *isEncrypted
 	}
 
 	updatedNote, err := s.repo.UpdateWithOptimisticLock(ctx, noteID, title, content, version)
@@ -114,8 +123,8 @@ func (s *NoteService) Update(ctx context.Context, userID, noteID uuid.UUID, titl
 	// Save version history asynchronously
 	go s.repo.SaveVersion(context.Background(), noteID, userID, updatedNote.Title, updatedNote.Content, updatedNote.Version, "内容更新")
 
-	// Re-index for RAG search (async)
-	if s.indexer != nil {
+	// Re-index for RAG search (async) - skip for encrypted notes
+	if s.indexer != nil && !updatedNote.IsEncrypted {
 		go s.indexer.IndexNote(context.Background(), noteID.String(), updatedNote.Title, updatedNote.Content, userID.String())
 	}
 

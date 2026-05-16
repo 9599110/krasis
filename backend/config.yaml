@@ -38,16 +38,11 @@ oauth:
 
 storage:
   minio:
-    endpoint: localhost:9000
-    access_key: minioadmin
-    secret_key: minioadmin
+    endpoint: localhost:19000
+    access_key: minio
+    secret_key: minio123
     bucket: krasis
     use_ssl: false
-  ai:
-    qdrant:
-      endpoint: http://localhost:6333
-      api_key: ""
-      collection: note_chunks
 
 log:
   level: debug # debug, info, warn, error

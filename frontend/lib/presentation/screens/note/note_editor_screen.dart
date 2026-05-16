@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../providers/note_provider.dart';
 import '../../../core/errors/exceptions.dart';
 import '../../providers/auth_provider.dart';
+import '../../../core/crypto/key_store.dart' as key_store;
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String noteId;
@@ -33,6 +34,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   int _currentVersion = 0;
   final _recorder = Record();
   bool _isRecording = false;
+  bool _isEncrypted = false;
+  bool _waitingForUnlock = false;
 
   static const int _titleMaxLen = 80;
 
@@ -53,14 +56,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     _titleController.addListener(_markAsChanged);
 
     _quillController = quill.QuillController(
-      document: quill.Document(),
+      document: quill.Document()..insert(0, '\n'),
       selection: const TextSelection.collapsed(offset: 0),
     );
     _quillController.readOnly = false;
     _quillController.addListener(_markAsChanged);
 
     if (widget.noteId != 'new') {
-      _loadNote();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadNote());
     }
   }
 
@@ -82,13 +85,67 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final note = await ref.read(noteEditorProvider(widget.noteId).notifier).load();
     if (note != null && mounted) {
       _titleController.text = note.title;
+
+      // Handle encrypted content
+      String content = note.content;
+      if (note.isEncrypted) {
+        if (key_store.hasSessionKey()) {
+          try {
+            content = await key_store.decryptNoteContent(content);
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('解密失败: $e')),
+              );
+            }
+            content = '';
+          }
+          _isEncrypted = true;
+        } else {
+          // No session key — try to auto-sync from server first
+          _isEncrypted = true;
+          final hadLocalKey = await key_store.hasStoredKey();
+          if (!hadLocalKey) {
+            // Maybe keys were synced from another device (e.g. Web).
+            // Wait briefly for any in-flight auto-sync, then try again.
+            await Future.delayed(const Duration(milliseconds: 500));
+            await key_store.autoSyncKeys();
+            if (key_store.hasSessionKey()) {
+              // Key was synced and is in session? no — still needs unlock.
+              // But if key was imported via syncFromServer, it's stored but locked.
+              // Try to see if someone set unlock callback — skip, just prompt user.
+            } else if (await key_store.hasStoredKey()) {
+              // Keys now exist locally but need unlock — show unlock prompt
+              content = '_笔记已加密，请解锁密钥后刷新_';
+              _waitingForUnlock = true;
+            } else {
+              content = '_笔记已加密，但未找到加密密钥_';
+              _waitingForUnlock = true;
+            }
+          } else {
+            // Local key exists but not unlocked
+            content = '_笔记已加密，请解锁密钥后刷新_';
+            _waitingForUnlock = true;
+          }
+        }
+      }
+
       final mdDoc = md.Document(encodeHtml: false, extensionSet: md.ExtensionSet.gitHubFlavored);
-      final delta = MarkdownToDelta(markdownDocument: mdDoc).convert(note.content);
-      _quillController = quill.QuillController(
-        document: quill.Document.fromDelta(delta),
-        selection: const TextSelection.collapsed(offset: 0),
-      );
-      _quillController.readOnly = false;
+      final safeContent = content.isEmpty ? '\n' : content;
+      final delta = MarkdownToDelta(markdownDocument: mdDoc).convert(safeContent);
+      // Only rebuild controller if delta is non-empty (empty delta crashes Document.fromDelta)
+      if (delta.isNotEmpty) {
+        _quillController.dispose();
+        _quillController = quill.QuillController(
+          document: quill.Document.fromDelta(delta),
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+      }
+      // If session key is now available (e.g. after unlock), clear the unlock prompt flag
+      if (key_store.hasSessionKey()) {
+        _waitingForUnlock = false;
+      }
+      _quillController.readOnly = _waitingForUnlock;
       _quillController.addListener(_markAsChanged);
       _currentVersion = note.version;
       setState(() {});
@@ -107,11 +164,23 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     try {
       // Requirement: UI is WYSIWYG, but we store Markdown.
       // Pasted markdown should be stored as-is (treated as plain text in editor).
-      final contentMarkdown = DeltaToMarkdown().convert(_quillController.document.toDelta());
+      String contentMarkdown = DeltaToMarkdown().convert(_quillController.document.toDelta());
+
+      // Encrypt content if encryption is enabled
+      if (_isEncrypted) {
+        if (!key_store.hasSessionKey()) {
+          _showSnackBar('密钥未解锁，无法加密保存');
+          setState(() => _isSaving = false);
+          return;
+        }
+        contentMarkdown = await key_store.encryptNoteContent(contentMarkdown);
+      }
+
       if (widget.noteId == 'new') {
         final note = await ref.read(noteEditorProvider('new').notifier).createNote(
               title: title,
               content: contentMarkdown,
+              isEncrypted: _isEncrypted,
             );
         if (mounted) {
           context.replace('/notes/note/${note.id}');
@@ -121,6 +190,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               title: title,
               content: contentMarkdown,
               version: _currentVersion,
+              isEncrypted: _isEncrypted,
             );
         _currentVersion++;
         setState(() => _hasChanges = false);
@@ -184,6 +254,62 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     final mi = pad2(d.minute);
     final ss = pad2(d.second);
     return '${yyyy}${mm}${dd}_${hh}${mi}${ss}.m4a';
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
+  }
+
+  Future<bool> _showUnlockForEncryptDialog() async {
+    final passwordController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('需要解锁密钥'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('加密笔记需要解锁 ECC 密钥。请输入密码以解锁。'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: '密钥密码',
+                border: OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('解锁'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && passwordController.text.isNotEmpty) {
+      final ok = await key_store.unlockKey(passwordController.text);
+      if (ok) {
+        _showSnackBar('密钥已解锁');
+        return true;
+      } else {
+        _showSnackBar('密码错误，解锁失败');
+        return false;
+      }
+    }
+    return false;
   }
 
   Future<void> _toggleVoiceInput() async {
@@ -319,19 +445,48 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               }
             },
           ),
-          if (widget.noteId != 'new') ...[
-            // TODO: 暂时屏蔽分享功能
-            // IconButton(
-            //   icon: const Icon(Icons.share),
-            //   tooltip: '分享',
-            //   onPressed: () => context.push('/notes/note/${widget.noteId}/share'),
-            // ),
-            IconButton(
+          // Encrypt toggle / unlock button
+          IconButton(
+            icon: Icon(
+              _isEncrypted ? Icons.lock : Icons.lock_open,
+              color: _isEncrypted ? Colors.orange : null,
+            ),
+            tooltip: _isEncrypted ? '加密已启用' : '加密已禁用',
+            onPressed: () async {
+              if (_isEncrypted) {
+                // Note is marked as encrypted on the server
+                if (!key_store.hasSessionKey()) {
+                  // Encrypted but key locked → show unlock dialog first, then reload & decrypt
+                  final ok = await _showUnlockForEncryptDialog();
+                  if (ok && mounted) {
+                    _showSnackBar('密钥已解锁，正在解密笔记...');
+                    await _loadNote();
+                  }
+                } else {
+                  // Encrypted and already unlocked → disable encryption (will save plaintext)
+                  setState(() => _isEncrypted = false);
+                  _showSnackBar('已禁用笔记加密（保存时将以明文存储）');
+                }
+              } else {
+                // Note is not encrypted
+                if (key_store.hasSessionKey()) {
+                  setState(() => _isEncrypted = true);
+                  _showSnackBar('已启用笔记加密，保存时自动加密');
+                } else {
+                  final ok = await _showUnlockForEncryptDialog();
+                  if (ok) {
+                    setState(() => _isEncrypted = true);
+                    _showSnackBar('已启用笔记加密，保存时自动加密');
+                  }
+                }
+              }
+            },
+          ),
+          IconButton(
               icon: const Icon(Icons.history),
               tooltip: '版本历史',
               onPressed: () => context.push('/notes/note/${widget.noteId}/versions'),
             ),
-          ],
           if (_hasChanges || _isSaving)
             IconButton(
               icon: _isSaving

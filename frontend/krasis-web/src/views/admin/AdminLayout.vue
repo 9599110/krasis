@@ -24,7 +24,6 @@ const collapsed = ref(false)
 const menuItems = [
   { name: 'admin-dashboard', label: '仪表盘', icon: HomeIcon },
   { name: 'admin-users', label: '用户管理', icon: UserListIcon },
-  { name: 'admin-shares', label: '分享审核', icon: CheckCircleIcon },
   { name: 'admin-ai-models', label: 'AI 模型', icon: Ai1Icon },
   { name: 'admin-ai-config', label: 'AI 配置', icon: SettingIcon },
   { name: 'admin-groups', label: '用户组', icon: UsergroupIcon },
@@ -36,7 +35,6 @@ const menuItems = [
 const pageTitles: Record<string, string> = {
   'admin-dashboard': '系统概览',
   'admin-users': '用户管理',
-  'admin-shares': '分享审核',
   'admin-ai-models': 'AI 模型',
   'admin-ai-config': 'AI 配置',
   'admin-groups': '用户组',

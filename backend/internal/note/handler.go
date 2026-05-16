@@ -22,9 +22,10 @@ func (h *Handler) CreateNote(c *gin.Context) {
 	ownerID, _ := uuid.Parse(c.GetString("user_id"))
 
 	var req struct {
-		Title    string  `json:"title"`
-		Content  string  `json:"content"`
-		FolderID *string `json:"folder_id"`
+		Title       string  `json:"title"`
+		Content     string  `json:"content"`
+		FolderID    *string `json:"folder_id"`
+		IsEncrypted bool    `json:"is_encrypted"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, 400, response.ErrBadRequest, "参数错误")
@@ -41,17 +42,18 @@ func (h *Handler) CreateNote(c *gin.Context) {
 		folderID = &id
 	}
 
-	note, err := h.service.Create(c, ownerID, req.Title, req.Content, folderID)
+	note, err := h.service.Create(c, ownerID, req.Title, req.Content, folderID, req.IsEncrypted)
 	if err != nil {
 		response.Error(c, 500, response.ErrInternalServerError, "创建笔记失败")
 		return
 	}
 
 	response.Success(c, gin.H{
-		"id":         note.ID,
-		"title":      note.Title,
-		"version":    note.Version,
-		"created_at": note.CreatedAt,
+		"id":           note.ID,
+		"title":        note.Title,
+		"version":      note.Version,
+		"is_encrypted": note.IsEncrypted,
+		"created_at":   note.CreatedAt,
 	})
 }
 
@@ -74,15 +76,16 @@ func (h *Handler) GetNote(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"id":         note.ID,
-		"title":      note.Title,
-		"content":    note.Content,
-		"owner_id":   note.OwnerID,
-		"folder_id":  note.FolderID,
-		"version":    note.Version,
-		"is_public":  note.IsPublic,
-		"created_at": note.CreatedAt,
-		"updated_at": note.UpdatedAt,
+		"id":            note.ID,
+		"title":         note.Title,
+		"content":       note.Content,
+		"owner_id":      note.OwnerID,
+		"folder_id":     note.FolderID,
+		"version":       note.Version,
+		"is_public":     note.IsPublic,
+		"is_encrypted":  note.IsEncrypted,
+		"created_at":    note.CreatedAt,
+		"updated_at":    note.UpdatedAt,
 	}
 
 	if note.ContentHTML.Valid {
@@ -108,7 +111,8 @@ func (h *Handler) ListNotes(c *gin.Context) {
 		}
 	}
 
-	notes, total, err := h.service.List(c, ownerID, folderID, page, size, sort, order)
+	notes, total, err := h.service.List(c, ownerID, folderID, page, size, sort, order,
+		c.Query("hide_encrypted") == "true")
 	if err != nil {
 		h.logger.Error("ListNotes failed", zap.Error(err), zap.String("owner_id", ownerID.String()))
 		response.Error(c, 500, response.ErrInternalServerError, "获取笔记列表失败")
@@ -118,15 +122,16 @@ func (h *Handler) ListNotes(c *gin.Context) {
 	items := make([]gin.H, 0, len(notes))
 	for _, n := range notes {
 		item := gin.H{
-			"id":             n.ID,
-			"title":          n.Title,
+			"id":              n.ID,
+			"title":           n.Title,
 			"content_preview": truncate(n.Content, 200),
-			"owner_id":       n.OwnerID,
-			"folder_id":      n.FolderID,
-			"version":        n.Version,
-			"is_public":      n.IsPublic,
-			"created_at":     n.CreatedAt,
-			"updated_at":     n.UpdatedAt,
+			"owner_id":        n.OwnerID,
+			"folder_id":       n.FolderID,
+			"version":         n.Version,
+			"is_public":       n.IsPublic,
+			"is_encrypted":    n.IsEncrypted,
+			"created_at":      n.CreatedAt,
+			"updated_at":      n.UpdatedAt,
 		}
 		items = append(items, item)
 	}
@@ -149,9 +154,10 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 	}
 
 	var req struct {
-		Title   string `json:"title"`
-		Content string `json:"content"`
-		Version int    `json:"version"`
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		Version     int    `json:"version"`
+		IsEncrypted *bool  `json:"is_encrypted"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, 400, response.ErrBadRequest, "参数错误")
@@ -167,7 +173,7 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 		version = req.Version
 	}
 
-	note, err := h.service.Update(c, ownerID, noteID, req.Title, req.Content, version)
+	note, err := h.service.Update(c, ownerID, noteID, req.Title, req.Content, version, req.IsEncrypted)
 	if err != nil {
 		if _, ok := err.(*ConflictError); ok {
 			response.Error(c, 409, response.ErrConflict, "版本冲突")
@@ -182,10 +188,11 @@ func (h *Handler) UpdateNote(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{
-		"id":         note.ID,
-		"title":      note.Title,
-		"version":    note.Version,
-		"updated_at": note.UpdatedAt,
+		"id":           note.ID,
+		"title":        note.Title,
+		"version":      note.Version,
+		"is_encrypted": note.IsEncrypted,
+		"updated_at":   note.UpdatedAt,
 	})
 }
 

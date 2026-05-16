@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/show_hidden_files_prefs.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -117,6 +118,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             title: '账户',
             children: [
               _ListTile(
+                icon: Icons.vpn_key_outlined,
+                title: '加密密钥管理',
+                onTap: () => context.push('/keys'),
+              ),
+              // Hidden files toggle — when ON, hidden encrypted files are synced to the client
+              _HiddenFilesToggle(),
+              _ListTile(
                 icon: Icons.person_outline,
                 title: '个人资料',
                 onTap: _showEditProfile,
@@ -208,6 +216,148 @@ class _ListTile extends StatelessWidget {
       title: Text(title),
       trailing: trailing ?? const Icon(Icons.chevron_right),
       onTap: onTap,
+    );
+  }
+}
+
+/// A toggle switch controlling whether hidden encrypted notes/files
+/// are synced and displayed in the frontend.
+///
+/// - OFF (default): encrypted content is hidden
+/// - ON: encrypted content is visible (requires password to enable)
+class _HiddenFilesToggle extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_HiddenFilesToggle> createState() => _HiddenFilesToggleState();
+}
+
+class _HiddenFilesToggleState extends ConsumerState<_HiddenFilesToggle> {
+  final _passwordController = TextEditingController();
+  bool _verifying = false;
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleToggle(bool value) async {
+    // Turning OFF (hiding) — no password needed
+    if (!value) {
+      ref.read(showHiddenFilesProvider.notifier).toggle(false);
+      return;
+    }
+
+    // Turning ON — need to verify login password via backend
+    final ok = await _showPasswordDialog();
+    if (ok && mounted) {
+      ref.read(showHiddenFilesProvider.notifier).toggle(true);
+    }
+  }
+
+  Future<bool> _showPasswordDialog() async {
+    _passwordController.clear();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.lock_outline, size: 20, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('需要密码验证'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('显示加密内容需要验证您的登录密码。'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: '登录密码',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) async {
+                  setDialogState(() => _verifying = true);
+                  final ok = await _verifyPassword(_passwordController.text);
+                  if (ctx.mounted) Navigator.pop(ctx, ok);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: _verifying
+                  ? null
+                  : () async {
+                      setDialogState(() => _verifying = true);
+                      try {
+                        final ok = await _verifyPassword(_passwordController.text);
+                        if (ctx.mounted) Navigator.pop(ctx, ok);
+                      } finally {
+                        if (ctx.mounted) setDialogState(() => _verifying = false);
+                      }
+                    },
+              child: _verifying
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('验证'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) return true;
+
+    // Show error if dialog was closed with wrong password
+    if (result == false && _passwordController.text.isNotEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('密码错误，验证失败')),
+        );
+      }
+    }
+    return false;
+  }
+
+  Future<bool> _verifyPassword(String password) async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.post('/auth/verify-password', data: {
+        'password': password,
+      });
+      return response.data?['data']?['verified'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showHidden = ref.watch(showHiddenFilesProvider);
+
+    return SwitchListTile(
+      secondary: Icon(
+        showHidden ? Icons.visibility : Icons.visibility_off,
+        color: showHidden ? Colors.orange : Colors.grey,
+      ),
+      title: const Text('显示隐藏的加密文件'),
+      subtitle: Text(
+        showHidden ? '加密内容已显示' : '加密内容已隐藏（需密码开启）',
+        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+      ),
+      value: showHidden,
+      onChanged: _handleToggle,
     );
   }
 }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
@@ -74,6 +73,8 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
 
     try {
       final token = await _storage.getAccessToken();
+
+      // Use a separate Dio for streaming — ResponseType.stream returns ResponseBody
       final dio = Dio(BaseOptions(
         baseUrl: AppConfig.apiBaseUrl,
         responseType: ResponseType.stream,
@@ -82,7 +83,7 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
         dio.options.headers['Authorization'] = 'Bearer $token';
       }
 
-      final response = await dio.post<Map<String, dynamic>>(
+      final response = await dio.post<ResponseBody>(
         '/ai/ask/stream',
         data: {
           'question': question,
@@ -91,51 +92,74 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
         },
       );
 
-      final stream = response.data!['data'] as Stream<Uint8List>? ?? (response.data as Stream<dynamic>);
-
-      await for (final token in _parseSSEStream(stream)) {
-        yield token;
+      final body = response.data;
+      if (body == null) {
+        throw Exception('Empty stream response');
       }
+
+      await for (final chunk in body.stream) {
+        final decoded = utf8.decode(chunk);
+        final tokens = _parseSSEChunk(decoded);
+        for (final token in tokens) {
+          if (token == null) continue; // done event
+          yield token;
+          state = state.copyWith(streamingText: state.streamingText + token);
+        }
+      }
+
+      _finalizeMessage();
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 404) {
+        // Model not configured, let user know
+        state = state.copyWith(isStreaming: false);
+        yield '';
+        state = state.copyWith(
+          messages: [
+            ...state.messages,
+            AIMessageModel(
+              id: 'local_err_${DateTime.now().millisecondsSinceEpoch}',
+              conversationId: conversationId,
+              role: 'assistant',
+              content: '❌ AI 模型未配置或不存在，请在服务端设置正确的模型',
+              createdAt: DateTime.now(),
+            ),
+          ],
+        );
+        return;
+      }
       state = state.copyWith(isStreaming: false);
       rethrow;
     }
   }
 
-  Stream<String> _parseSSEStream(Stream stream) async* {
-    var buffer = '';
+  /// Parse an SSE chunk and return a list of tokens (null = done event).
+  List<String?> _parseSSEChunk(String chunk) {
+    final results = <String?>[];
+    final lines = chunk.split('\n');
 
-    await for (final chunk in stream) {
-      String text;
-      if (chunk is List<int>) {
-        text = utf8.decode(chunk);
-      } else {
-        text = chunk.toString();
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
+
+      if (trimmed.startsWith('event: done')) {
+        results.add(null); // signal done
+        continue;
       }
-      buffer += text;
-      final lines = buffer.split('\n');
-      buffer = lines.removeLast();
 
-      for (final line in lines) {
-        if (line.startsWith('event: done')) {
-          _finalizeMessage();
-          return;
-        }
-        if (line.startsWith('data: ')) {
-          try {
-            final data = jsonDecode(line.substring(6)) as Map<String, dynamic>;
-            final token = data['token'] as String?;
-            if (token != null) {
-              yield token;
-              state = state.copyWith(streamingText: state.streamingText + token);
-            }
-          } catch (_) {
-            // skip parse errors
+      if (trimmed.startsWith('data: ')) {
+        try {
+          final data = jsonDecode(trimmed.substring(6)) as Map<String, dynamic>;
+          final token = data['token'] as String?;
+          if (token != null) {
+            results.add(token);
           }
+        } catch (_) {
+          // skip malformed json
         }
       }
     }
-    _finalizeMessage();
+
+    return results;
   }
 
   void _finalizeMessage() {
@@ -153,6 +177,8 @@ class AIChatNotifier extends StateNotifier<AIChatState> {
           ),
         ],
       );
+    } else {
+      state = state.copyWith(isStreaming: false);
     }
   }
 }

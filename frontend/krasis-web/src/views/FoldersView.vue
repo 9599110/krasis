@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { listFolders, createFolder, updateFolder, deleteFolder } from '../api/notes'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+
+const router = useRouter()
 
 const folders = ref<any[]>([])
 const loading = ref(true)
@@ -84,6 +87,10 @@ function formatDate(dateStr: string) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('zh-CN')
 }
+
+function navigateToFolder(folderId: string) {
+  router.push({ name: 'notes', query: { folder: folderId } })
+}
 </script>
 
 <template>
@@ -104,10 +111,15 @@ function formatDate(dateStr: string) {
     </div>
 
     <div class="folder-grid" v-else>
-      <div v-for="folder in folders" :key="folder.id" class="folder-card">
+      <div
+        v-for="folder in folders"
+        :key="folder.id"
+        class="folder-card"
+        @click="navigateToFolder(folder.id)"
+      >
         <div class="card-top">
           <t-icon name="folder" size="32px" :style="{ color: formColor === folder.color ? folder.color : '#4CAF50' }" />
-          <div class="card-actions">
+          <div class="card-actions" @click.stop>
             <t-button variant="text" size="small" @click="openEdit(folder)">
               <t-icon name="edit" />
             </t-button>

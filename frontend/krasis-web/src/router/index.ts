@@ -22,12 +22,6 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
-      path: '/share/:token',
-      name: 'share',
-      component: () => import('../views/ShareView.vue'),
-      meta: { guest: true },
-    },
-    {
       path: '/admin',
       component: () => import('../views/admin/AdminLayout.vue'),
       meta: { requiresAuth: true },
@@ -41,11 +35,6 @@ const router = createRouter({
           path: 'users',
           name: 'admin-users',
           component: () => import('../views/admin/UsersView.vue'),
-        },
-        {
-          path: 'shares',
-          name: 'admin-shares',
-          component: () => import('../views/admin/SharesView.vue'),
         },
         {
           path: 'ai-models',
@@ -120,6 +109,16 @@ const router = createRouter({
           component: () => import('../views/ProfileView.vue'),
         },
         {
+          path: 'keys',
+          name: 'keys',
+          component: () => import('../views/KeyManageView.vue'),
+        },
+        {
+          path: 'photos',
+          name: 'photos',
+          component: () => import('../views/PhotosView.vue'),
+        },
+        {
           path: '',
           redirect: { name: 'notes' },
         },
@@ -137,7 +136,8 @@ router.beforeEach(async (to) => {
   }
 
   // If has token but no user loaded, validate token via /auth/me
-  if (to.meta.requiresAuth && token) {
+  // Cache: 如果已加载用户则跳过，避免每次路由切换都发请求
+  if (to.meta.requiresAuth && token && !authStore.user) {
     try {
       await authStore.me()
     } catch (e: any) {
@@ -150,7 +150,7 @@ router.beforeEach(async (to) => {
     }
   }
 
-  if (to.meta.guest && token && to.name !== 'share') {
+  if (to.meta.guest && token) {
     return { name: 'notes' }
   }
 })

@@ -42,12 +42,3 @@ export const updateFolder = (id: string, data: { name: string }) =>
 export const deleteFolder = (id: string) =>
   apiClient.delete(`/folders/${id}`)
 
-// Shares
-export const createShare = (noteId: string, data: { password?: string; expires_at?: string | null }) =>
-  apiClient.post(`/notes/${noteId}/share`, data)
-
-export const getShareStatus = (noteId: string) =>
-  apiClient.get(`/notes/${noteId}/share`)
-
-export const deleteShare = (noteId: string) =>
-  apiClient.delete(`/notes/${noteId}/share`)

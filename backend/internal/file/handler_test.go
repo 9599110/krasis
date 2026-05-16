@@ -21,7 +21,7 @@ type stubFileService struct {
 	deleteID      uuid.UUID
 }
 
-func (s *stubFileService) GeneratePresignURL(ctx context.Context, userID uuid.UUID, fileName, fileType string, noteID *uuid.UUID) (*PresignResult, error) {
+func (s *stubFileService) GeneratePresignURL(ctx context.Context, userID uuid.UUID, fileName, fileType string, noteID *uuid.UUID, folderID *uuid.UUID) (*PresignResult, error) {
 	if s.presignErr != nil {
 		return nil, s.presignErr
 	}
@@ -44,8 +44,36 @@ func (s *stubFileService) DeleteFile(ctx context.Context, fileID uuid.UUID) erro
 	return s.deleteErr
 }
 
-func (s *stubFileService) ListByNote(ctx context.Context, noteID uuid.UUID) ([]*File, error) {
+func (s *stubFileService) ListByNote(ctx context.Context, noteID uuid.UUID) ([]*ListFileResult, error) {
 	return nil, nil
+}
+
+func (s *stubFileService) ListByFolder(ctx context.Context, folderID uuid.UUID) ([]*ListFileResult, error) {
+	return nil, nil
+}
+
+func (s *stubFileService) ListHiddenByFolder(ctx context.Context, folderID uuid.UUID) ([]*ListFileResult, error) {
+	return nil, nil
+}
+
+func (s *stubFileService) UnhideFile(ctx context.Context, fileID uuid.UUID) error {
+	return nil
+}
+
+func (s *stubFileService) MarkHidden(ctx context.Context, fileID uuid.UUID) error {
+	return nil
+}
+
+func (s *stubFileService) GenerateGetURL(ctx context.Context, fileID uuid.UUID) (string, error) {
+	return "https://minio.example.com/file", nil
+}
+
+func (s *stubFileService) GenerateDownloadURL(ctx context.Context, fileID uuid.UUID) (string, error) {
+	return "https://minio.example.com/download", nil
+}
+
+func (s *stubFileService) ListImages(ctx context.Context, userID uuid.UUID, page, size int) ([]*ListFileResult, int64, error) {
+	return nil, 0, nil
 }
 
 func TestHandler_GetPresignURL_Success(t *testing.T) {

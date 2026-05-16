@@ -133,6 +133,7 @@ func (h *Handler) AskStream(c *gin.Context) {
 
 	stream, err := h.service.AskStream(c.Request.Context(), userID, &req)
 	if err != nil {
+		h.logger.Error("AskStream failed", zap.Error(err), zap.String("question", req.Question))
 		c.JSON(500, gin.H{"code": 3001, "message": err.Error()})
 		return
 	}

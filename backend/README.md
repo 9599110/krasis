@@ -104,15 +104,6 @@ minio:
   bucket: notes
   use_ssl: false
 
-elasticsearch:
-  url: http://localhost:9200
-  index_prefix: notekeeper
-
-qdrant:
-  host: localhost
-  port: 6334
-  collection: note_chunks
-
 oauth:
   github:
     client_id: ""

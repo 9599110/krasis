@@ -24,7 +24,7 @@ export const useSearchStore = defineStore('search', () => {
       const res = await apiClient.get<ApiResponse<SearchResponse>>('/search', {
         params: { q, page: p, size },
       })
-      results.value = res.data.data.results
+      results.value = res.data.data.items || res.data.data.results || []
       total.value = res.data.data.total
       page.value = res.data.data.page
     } finally {

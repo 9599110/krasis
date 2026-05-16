@@ -125,6 +125,24 @@ func (s *UserService) AuthenticateByUsername(ctx context.Context, username, pass
 	return user, nil
 }
 
+// VerifyPassword checks if the given password matches the user's stored password hash.
+func (s *UserService) VerifyPassword(ctx context.Context, userID uuid.UUID, password string) (bool, error) {
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("user not found: %w", err)
+	}
+	if user.PasswordHash == nil || *user.PasswordHash == "" {
+		return false, fmt.Errorf("no local password set — user may use OAuth only")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(password)); err != nil {
+		return false, nil // wrong password, not an error
+	}
+	if user.Status == 0 {
+		return false, fmt.Errorf("user disabled")
+	}
+	return true, nil
+}
+
 func (s *UserService) DeleteUser(ctx context.Context, userID uuid.UUID) error {
 	return s.repo.Delete(ctx, userID)
 }

@@ -34,7 +34,7 @@ type stubNoteRepo struct {
 
 var testUserID = uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 
-func (r *stubNoteRepo) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error) {
+func (r *stubNoteRepo) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID, isEncrypted bool) (*Note, error) {
 	if r.createErr != nil {
 		return nil, r.createErr
 	}
@@ -46,7 +46,7 @@ func (r *stubNoteRepo) GetByID(ctx context.Context, id uuid.UUID) (*Note, error)
 	}
 	return r.getNote, nil
 }
-func (r *stubNoteRepo) ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error) {
+func (r *stubNoteRepo) ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string, hideEncrypted bool) ([]*Note, int64, error) {
 	if r.listErr != nil {
 		return nil, 0, r.listErr
 	}
@@ -78,6 +78,7 @@ func (r *stubNoteRepo) GetVersion(ctx context.Context, noteID uuid.UUID, version
 func (r *stubNoteRepo) RestoreVersion(ctx context.Context, noteID uuid.UUID, version int, title, content string) error {
 	return r.restoreErr
 }
+func (r *stubNoteRepo) SetEncrypted(ctx context.Context, id uuid.UUID, isEncrypted bool) error { return nil }
 func (r *stubNoteRepo) Count(ctx context.Context) (int64, error) { return 0, nil }
 func (r *stubNoteRepo) CountToday(ctx context.Context, action string) (int64, error) { return 0, nil }
 func (r *stubNoteRepo) TotalStorageUsed(ctx context.Context) (int64, error) { return 0, nil }
@@ -364,7 +365,7 @@ func TestNoteService_Create_DefaultTitle(t *testing.T) {
 	repo := &stubNoteRepo{createNote: &Note{ID: uuid.New(), Title: "Untitled", Version: 1, CreatedAt: time.Now()}}
 	svc := NewNoteService(repo, nil)
 
-	note, err := svc.Create(context.Background(), testUserID, "", "content", nil)
+	note, err := svc.Create(context.Background(), testUserID, "", "content", nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -389,7 +390,7 @@ func TestNoteService_List_PageDefaults(t *testing.T) {
 	repo := &stubNoteRepo{listNotes: []*Note{}, total: 0}
 	svc := NewNoteService(repo, nil)
 
-	notes, total, err := svc.List(context.Background(), testUserID, nil, 0, 0, "", "")
+	notes, total, err := svc.List(context.Background(), testUserID, nil, 0, 0, "", "", false)
 	if err != nil {
 		t.Fatal(err)
 	}

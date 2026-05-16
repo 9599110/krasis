@@ -64,13 +64,7 @@ type OAuthProviderConfig struct {
 }
 
 type AIConfig struct {
-	Qdrant QdrantConfig `mapstructure:"qdrant"`
-}
-
-type QdrantConfig struct {
-	Endpoint   string `mapstructure:"endpoint"`
-	APIKey     string `mapstructure:"api_key"`
-	Collection string `mapstructure:"collection"`
+	// pgvector is used directly via note_embeddings table; no Qdrant config needed
 }
 
 type StorageConfig struct {
@@ -125,14 +119,11 @@ func Load() (*Config, error) {
 	v.SetDefault("jwt.expiration", 604800)
 	v.SetDefault("log.level", "debug")
 	v.SetDefault("log.format", "json")
-	v.SetDefault("storage.minio.endpoint", "localhost:9000")
+	v.SetDefault("storage.minio.endpoint", "")
 	v.SetDefault("storage.minio.access_key", "minioadmin")
 	v.SetDefault("storage.minio.secret_key", "minioadmin")
 	v.SetDefault("storage.minio.bucket", "krasis")
 	v.SetDefault("storage.minio.use_ssl", false)
-	v.SetDefault("storage.ai.qdrant.endpoint", "http://localhost:6333")
-	v.SetDefault("storage.ai.qdrant.api_key", "")
-	v.SetDefault("storage.ai.qdrant.collection", "note_chunks")
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {

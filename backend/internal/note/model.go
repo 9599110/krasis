@@ -21,17 +21,18 @@ var (
 )
 
 type Note struct {
-	ID          uuid.UUID     `json:"id"`
-	Title       string        `json:"title"`
-	Content     string        `json:"content"`
-	ContentHTML sql.NullString `json:"content_html,omitempty"`
-	OwnerID     uuid.UUID     `json:"owner_id"`
-	FolderID    types.NullUUID `json:"folder_id"`
-	Version     int           `json:"version"`
-	IsPublic    bool          `json:"is_public"`
-	IsDeleted   bool          `json:"-"`
-	CreatedAt   time.Time     `json:"created_at"`
-	UpdatedAt   types.NullTime `json:"updated_at"`
+	ID           uuid.UUID      `json:"id"`
+	Title        string         `json:"title"`
+	Content      string         `json:"content"`
+	ContentHTML  sql.NullString `json:"content_html,omitempty"`
+	OwnerID      uuid.UUID      `json:"owner_id"`
+	FolderID     types.NullUUID `json:"folder_id"`
+	Version      int            `json:"version"`
+	IsPublic     bool           `json:"is_public"`
+	IsDeleted    bool           `json:"-"`
+	IsEncrypted  bool           `json:"is_encrypted"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    types.NullTime `json:"updated_at"`
 }
 
 type NoteVersion struct {
@@ -55,12 +56,12 @@ func NewNoteRepository(pool *pgxpool.Pool, logger *zap.Logger) *NoteRepository {
 	return &NoteRepository{pool: pool, logger: logger}
 }
 
-func (r *NoteRepository) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID) (*Note, error) {
+func (r *NoteRepository) Create(ctx context.Context, ownerID uuid.UUID, title, content string, folderID *uuid.UUID, isEncrypted bool) (*Note, error) {
 	var note Note
 	query := `
-		INSERT INTO notes (owner_id, title, content, folder_id, version)
-		VALUES ($1, $2, $3, $4, 1)
-		RETURNING id, title, content, owner_id, folder_id, version, created_at, updated_at
+		INSERT INTO notes (owner_id, title, content, folder_id, version, is_encrypted)
+		VALUES ($1, $2, $3, $4, 1, $5)
+		RETURNING id, title, content, owner_id, folder_id, version, is_encrypted, created_at, updated_at
 	`
 
 	var fid sql.NullString
@@ -68,9 +69,9 @@ func (r *NoteRepository) Create(ctx context.Context, ownerID uuid.UUID, title, c
 		fid = sql.NullString{String: folderID.String(), Valid: true}
 	}
 
-	err := r.pool.QueryRow(ctx, query, ownerID, title, content, fid).Scan(
+	err := r.pool.QueryRow(ctx, query, ownerID, title, content, fid, isEncrypted).Scan(
 		&note.ID, &note.Title, &note.Content, &note.OwnerID, &note.FolderID,
-		&note.Version, &note.CreatedAt, &note.UpdatedAt,
+		&note.Version, &note.IsEncrypted, &note.CreatedAt, &note.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create note: %w", err)
@@ -83,12 +84,12 @@ func (r *NoteRepository) GetByID(ctx context.Context, id uuid.UUID) (*Note, erro
 	var note Note
 	err := r.pool.QueryRow(ctx,
 		`SELECT id, title, content, content_html, owner_id, folder_id, version,
-				is_public, is_deleted, created_at, updated_at
+				is_public, is_encrypted, is_deleted, created_at, updated_at
 		 FROM notes WHERE id = $1`,
 		id,
 	).Scan(
 		&note.ID, &note.Title, &note.Content, &note.ContentHTML, &note.OwnerID,
-		&note.FolderID, &note.Version, &note.IsPublic, &note.IsDeleted,
+		&note.FolderID, &note.Version, &note.IsPublic, &note.IsEncrypted, &note.IsDeleted,
 		&note.CreatedAt, &note.UpdatedAt,
 	)
 	if err != nil {
@@ -100,7 +101,7 @@ func (r *NoteRepository) GetByID(ctx context.Context, id uuid.UUID) (*Note, erro
 	return &note, nil
 }
 
-func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string) ([]*Note, int64, error) {
+func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, folderID *uuid.UUID, page, size int, sort, order string, hideEncrypted bool) ([]*Note, int64, error) {
 	where := "WHERE owner_id = $1 AND is_deleted = false"
 	args := []interface{}{ownerID}
 	argIdx := 2
@@ -109,6 +110,10 @@ func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, fol
 		where += fmt.Sprintf(" AND folder_id = $%d", argIdx)
 		args = append(args, folderID)
 		argIdx++
+	}
+
+	if hideEncrypted {
+		where += " AND is_encrypted = false"
 	}
 
 	// Count
@@ -137,7 +142,7 @@ func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, fol
 	args = append(args, size, offset)
 	query := fmt.Sprintf(`
 		SELECT id, title, LEFT(content, 200), owner_id, folder_id, version,
-			   is_public, created_at, updated_at
+			   is_public, is_encrypted, created_at, updated_at
 		FROM notes %s
 		ORDER BY %s %s
 		LIMIT $%d OFFSET $%d
@@ -162,7 +167,7 @@ func (r *NoteRepository) ListByOwner(ctx context.Context, ownerID uuid.UUID, fol
 		var content sql.NullString
 		if err := rows.Scan(
 			&n.ID, &n.Title, &content, &n.OwnerID, &n.FolderID,
-			&n.Version, &n.IsPublic, &n.CreatedAt, &n.UpdatedAt,
+			&n.Version, &n.IsPublic, &n.IsEncrypted, &n.CreatedAt, &n.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}
@@ -181,10 +186,10 @@ func (r *NoteRepository) UpdateWithOptimisticLock(ctx context.Context, id uuid.U
 		UPDATE notes
 		SET title = $1, content = $2, version = version + 1, updated_at = NOW()
 		WHERE id = $3 AND version = $4 AND is_deleted = false
-		RETURNING id, title, content, owner_id, folder_id, version, created_at, updated_at
+		RETURNING id, title, content, owner_id, folder_id, version, is_encrypted, created_at, updated_at
 	`, title, content, id, currentVersion).Scan(
 		&note.ID, &note.Title, &note.Content, &note.OwnerID, &note.FolderID,
-		&note.Version, &note.CreatedAt, &note.UpdatedAt,
+		&note.Version, &note.IsEncrypted, &note.CreatedAt, &note.UpdatedAt,
 	)
 	if err != nil {
 		if err.Error() == "no rows in result set" {
@@ -198,6 +203,14 @@ func (r *NoteRepository) UpdateWithOptimisticLock(ctx context.Context, id uuid.U
 		return nil, err
 	}
 	return &note, nil
+}
+
+func (r *NoteRepository) SetEncrypted(ctx context.Context, id uuid.UUID, isEncrypted bool) error {
+	_, err := r.pool.Exec(ctx,
+		"UPDATE notes SET is_encrypted = $1 WHERE id = $2 AND is_deleted = false",
+		isEncrypted, id,
+	)
+	return err
 }
 
 func (r *NoteRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {

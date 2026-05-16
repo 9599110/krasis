@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/note_provider.dart';
+import '../../providers/show_hidden_files_prefs.dart';
 import '../../../data/models/note_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -16,10 +17,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     debugPrint('[home] initState called');
-    // Load notes when screen is mounted (after login)
+    // Load notes when screen is mounted (after login), check toggle state
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('[home] postFrameCallback -> calling loadNotes()');
-      ref.read(noteListProvider.notifier).loadNotes();
+      final hideEncrypted = ref.read(showHiddenFilesProvider);
+      ref.read(noteListProvider.notifier).loadNotes(hideEncrypted: !hideEncrypted);
     });
   }
 
@@ -185,16 +186,6 @@ class _NoteCard extends StatelessWidget {
                     icon: const Icon(Icons.more_vert, size: 20),
                     itemBuilder: (ctx) => [
                       PopupMenuItem(
-                        value: 'share',
-                        child: Row(
-                          children: [
-                            Icon(Icons.share, size: 20),
-                            const SizedBox(width: 8),
-                            const Text('分享'),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
                         value: 'history',
                         child: Row(
                           children: [
@@ -218,8 +209,6 @@ class _NoteCard extends StatelessWidget {
                     onSelected: (v) {
                       if (v == 'delete') {
                         onDelete();
-                      } else if (v == 'share') {
-                        context.push('/notes/note/${note.id}/share');
                       } else if (v == 'history') {
                         context.push('/notes/note/${note.id}/versions');
                       }
@@ -245,13 +234,13 @@ class _NoteCard extends StatelessWidget {
                     _formatDate(note.updatedAt),
                     style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
                   ),
-                  if (note.isPublic) ...[
+                  if (note.isEncrypted) ...[
                     const SizedBox(width: 8),
-                    Icon(Icons.public, size: 14, color: Colors.green.shade400),
+                    Icon(Icons.lock, size: 14, color: Colors.orange.shade400),
                     const SizedBox(width: 4),
                     Text(
-                      '已分享',
-                      style: TextStyle(color: Colors.green.shade400, fontSize: 12),
+                      '已加密',
+                      style: TextStyle(color: Colors.orange.shade400, fontSize: 12),
                     ),
                   ],
                 ],

@@ -40,19 +40,144 @@ func (r *SearchRepository) Search(ctx context.Context, query, searchType string,
 
 	offset := (page - 1) * size
 
-	// Try hybrid FTS first, fallback to simple FTS if zhparser not available
-	results, total, err := r.searchHybrid(ctx, tsQuery, page, size, offset)
+	// Step 1: Try hybrid FTS first, fallback to simple FTS if zhparser not available
+	ftsResults, ftsTotal, err := r.searchHybrid(ctx, tsQuery, page, size, offset)
 	if err != nil {
-		// If Chinese FTS fails (zhparser not installed), fallback to simple FTS
-		return r.searchSimple(ctx, tsQuery, page, size, offset)
+		ftsResults, ftsTotal, err = r.searchSimple(ctx, tsQuery, page, size, offset)
+		if err != nil {
+			ftsResults, ftsTotal = nil, 0
+		}
+	}
+
+	// Step 2: Run ILIKE substring search in parallel (catches Chinese text that FTS can't tokenize)
+	ilikeResults, ilikeTotal, err := r.searchByILike(ctx, query, page, size)
+	if err != nil {
+		ilikeResults, ilikeTotal = nil, 0
+	}
+
+	// Step 3: Merge FTS + ILIKE results (dedup by ID, FTS results rank higher)
+	merged := r.mergeResults(ftsResults, ilikeResults, ftsTotal, ilikeTotal, page, size)
+
+	return merged.results, merged.total, nil
+}
+
+// searchByILike performs substring matching using ILIKE (works well for Chinese text)
+func (r *SearchRepository) searchByILike(ctx context.Context, query string, page, size int) ([]*SearchResult, int64, error) {
+	offset := (page - 1) * size
+	pattern := "%" + query + "%"
+
+	var total int64
+	countQuery := `SELECT COUNT(*) FROM notes
+		WHERE is_deleted = false
+		AND (title ILIKE $1 OR content ILIKE $1)`
+	if err := r.pool.QueryRow(ctx, countQuery, pattern).Scan(&total); err != nil {
+		return nil, 0, err
 	}
 
 	if total == 0 {
-		// Fallback: trigram fuzzy search
-		return r.searchByTrigram(ctx, query, page, size)
+		return []*SearchResult{}, 0, nil
+	}
+
+	queryStr := `SELECT id, title, title AS highlights, 0.1 AS score, updated_at
+		FROM notes
+		WHERE is_deleted = false
+		AND (title ILIKE $1 OR content ILIKE $1)
+		ORDER BY
+			CASE WHEN title ILIKE $1 THEN 0 ELSE 1 END,
+			updated_at DESC
+		LIMIT $2 OFFSET $3`
+
+	rows, err := r.pool.Query(ctx, queryStr, pattern, size, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var results []*SearchResult
+	for rows.Next() {
+		var sr SearchResult
+		var hl string
+		sr.Type = "note"
+		if err := rows.Scan(&sr.ID, &sr.Title, &hl, &sr.Score, &sr.UpdatedAt); err != nil {
+			return nil, 0, err
+		}
+		if hl != "" {
+			sr.Highlights = []string{hl}
+		}
+		results = append(results, &sr)
 	}
 
 	return results, total, nil
+}
+
+// mergeResult holds merged search output
+type mergeResult struct {
+	results []*SearchResult
+	total   int64
+}
+
+// mergeResults combines FTS results with ILIKE results, deduplicating by ID.
+// FTS results take priority (higher score); ILIKE adds coverage for Chinese text.
+func (r *SearchRepository) mergeResults(fts, ilike []*SearchResult, ftsTotal, ilikeTotal int64, page, size int) *mergeResult {
+	// Fast path: only one source has results
+	if len(fts) == 0 && len(ilike) == 0 {
+		return &mergeResult{results: []*SearchResult{}, total: 0}
+	}
+	if len(fts) == 0 {
+		return &mergeResult{results: ilike, total: ilikeTotal}
+	}
+	if len(ilike) == 0 {
+		return &mergeResult{results: fts, total: ftsTotal}
+	}
+
+	// De-duplicate by ID, prefer FTS result (higher rank)
+	seen := make(map[string]bool, len(fts)+len(ilike))
+	merged := make([]*SearchResult, 0, len(fts)+len(ilike))
+
+	for _, r := range fts {
+		id := r.ID.String()
+		seen[id] = true
+		merged = append(merged, r)
+	}
+	for _, r := range ilike {
+		id := r.ID.String()
+		if !seen[id] {
+			seen[id] = true
+			merged = append(merged, r)
+		}
+	}
+
+	// Compute union total (max of both, since there may be overlap)
+	unionTotal := ftsTotal + ilikeTotal
+	// Rough overlap estimate: if we saw unique IDs from both sources, the overlap
+	// is the delta between unionTotal and what we actually dedup'd
+	overlap := (len(fts) + len(ilike)) - len(merged)
+	if overlap > 0 {
+		// Subtract overlap from union; cap at min(ftsTotal, ilikeTotal)
+		overlap64 := int64(overlap)
+		if overlap64 > ilikeTotal {
+			overlap64 = ilikeTotal
+		}
+		if overlap64 > ftsTotal {
+			overlap64 = ftsTotal
+		}
+		unionTotal -= overlap64
+	}
+	if unionTotal < int64(len(merged)) {
+		unionTotal = int64(len(merged))
+	}
+
+	// Apply pagination to merged results
+	offset := (page - 1) * size
+	if offset >= len(merged) {
+		return &mergeResult{results: []*SearchResult{}, total: unionTotal}
+	}
+	end := offset + size
+	if end > len(merged) {
+		end = len(merged)
+	}
+
+	return &mergeResult{results: merged[offset:end], total: unionTotal}
 }
 
 // searchHybrid performs hybrid search with Chinese and simple FTS
