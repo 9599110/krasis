@@ -38,9 +38,9 @@ oauth:
 
 storage:
   minio:
-    endpoint: localhost:19000
-    access_key: minio
-    secret_key: minio123
+    endpoint: localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin123
     bucket: krasis
     use_ssl: false
 

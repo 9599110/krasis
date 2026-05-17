@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,36 +30,40 @@ class PhotosNotifier extends StateNotifier<AsyncValue<List<FolderFile>>> {
     }
   }
 
-  Future<void> uploadPhoto(File file, {void Function(String err)? onError}) async {
+  Future<void> uploadPhoto(XFile xFile, {void Function(String err)? onError}) async {
     try {
-      final fileName = file.path.split('/').last;
+      final fileName = xFile.name;
+
+      // Determine MIME type from file extension
+      final ext = fileName.split('.').last.toLowerCase();
+      final mimeType = _mimeFromExt(ext);
 
       // Step 1: Get presigned upload URL
       final presignRes = await _api.get('/files/presign', queryParameters: {
         'file_name': fileName,
-        'file_type': 'image/jpeg',
+        'file_type': mimeType,
       });
       final pd = presignRes.data?['data'] as Map<String, dynamic>;
       final fileId = pd['file_id'] as String;
       final uploadUrl = pd['upload_url'] as String;
 
-      // Step 2: Upload file directly to MinIO
-      final bytes = await file.readAsBytes();
+      // Step 2: Upload file directly to MinIO using raw bytes
+      final bytes = await xFile.readAsBytes();
       final uploadDio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 60),
         receiveTimeout: const Duration(seconds: 60),
       ));
       final uploadRes = await uploadDio.put(
         uploadUrl,
-        data: Stream.fromIterable([bytes]),
+        data: bytes,
         options: Options(
           headers: {
-            'Content-Type': 'image/jpeg',
+            'Content-Type': mimeType,
             'Content-Length': bytes.length.toString(),
           },
         ),
       );
-      if (uploadRes.statusCode != 200) {
+      if (uploadRes.statusCode != 200 && uploadRes.statusCode != 204) {
         throw Exception('上传到存储失败 (${uploadRes.statusCode})');
       }
 
@@ -71,7 +74,26 @@ class PhotosNotifier extends StateNotifier<AsyncValue<List<FolderFile>>> {
       await loadPhotos();
     } catch (e) {
       onError?.call(e.toString());
+      rethrow;
     }
+  }
+
+  /// Map file extension to MIME type for images.
+  String _mimeFromExt(String ext) {
+    const mimeMap = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp',
+      'svg': 'image/svg+xml',
+      'ico': 'image/x-icon',
+      'avif': 'image/avif',
+      'heic': 'image/heic',
+      'heif': 'image/heif',
+    };
+    return mimeMap[ext] ?? 'application/octet-stream';
   }
 
   Future<void> deletePhoto(String fileId) async {
@@ -113,10 +135,11 @@ class _PhotosScreenState extends ConsumerState<PhotosScreen> {
     );
     if (picked.isEmpty) return;
 
+    setState(() => _uploading = true);
+
     for (final xFile in picked) {
       try {
-        final file = File(xFile.path);
-        await ref.read(photosProvider.notifier).uploadPhoto(file);
+        await ref.read(photosProvider.notifier).uploadPhoto(xFile);
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -124,6 +147,10 @@ class _PhotosScreenState extends ConsumerState<PhotosScreen> {
           );
         }
       }
+    }
+
+    if (mounted) {
+      setState(() => _uploading = false);
     }
   }
 

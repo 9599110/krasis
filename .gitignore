@@ -92,3 +92,5 @@ docker/postgres/pg_hba.conf
 .sandbox-tmp/
 CLAUDE.md
 crab.json
+
+# CrabCoder local artifacts

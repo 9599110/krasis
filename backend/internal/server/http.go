@@ -138,13 +138,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, logger *zap.
 		bucket := cfg.Storage.MinIO.Bucket
 		exists, err := minioClient.BucketExists(ctx, bucket)
 		if err != nil {
-			logger.Fatal("failed to check MinIO bucket", zap.Error(err))
-		}
-		if !exists {
+			logger.Warn("MinIO bucket check failed — file storage unavailable", zap.Error(err))
+			minioClient = nil
+		} else if !exists {
 			if err := minioClient.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
-				logger.Fatal("failed to create MinIO bucket", zap.Error(err))
+				logger.Warn("failed to create MinIO bucket — file storage unavailable", zap.Error(err))
+				minioClient = nil
+			} else {
+				logger.Info("created MinIO bucket", zap.String("bucket", bucket))
 			}
-			logger.Info("created MinIO bucket", zap.String("bucket", bucket))
 		}
 	} else {
 		logger.Warn("MinIO not configured, file storage features will be unavailable")
